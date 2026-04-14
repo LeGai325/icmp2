@@ -1,0 +1,1102 @@
+                                                                                                                                PDF Download
+                                                                                                                                3646547.3688417.pdf
+                                                                                                                                03 March 2026
+                                                                                                                                Total Citations: 1
+                                                                                                                                Total Downloads: 634
+    .
+    .
+        Latest updates: hps://dl.acm.org/doi/10.1145/3646547.3688417
+
+
+
+
+                                                                                                                                .
+                                                                                                                                .
+                                                                                                                      Published: 04 November 2024
+        .
+        .
+                                                                                                                      .
+    RESEARCH-ARTICLE
+
+
+
+
+                                                                                                                      .
+                                                                                                                      Citation in BibTeX format
+    Rumors Stop with the Wise: Unveiling Inbound SAV Deployment
+
+
+
+
+                                                                                                                      .
+                                                                                                                      .
+                                                                                                                      IMC '24: ACM Internet Measurement
+    through Spoofed ICMP Messages                                                                                     Conference
+                                                                                                                      November 4 - 6, 2024
+    SHUAICONG YU, Tsinghua University, Beijing, China                                                                 Madrid, Spain
+
+
+
+
+                                                                                                                      .
+    .
+                                                                                                                      .
+    SHUYING ZHUANG, Beijing Institute of Technology, Beijing, China                                                   Conference Sponsors:
+                                                                                                                      SIGCOMM
+    .
+    TAO YU, Ministry of Education of the People's Republic of China, Beijing, Beijing, China                          SIGMETRICS
+    .
+    CHANGQING AN, Tsinghua University, Beijing, China
+    .
+    JILONG WANG, Tsinghua University, Beijing, China
+    .
+    .
+    .
+    Open Access Support provided by:
+    .
+    Tsinghua University
+    .
+    Ministry of Education of the People's Republic of China
+    .
+    Beijing Institute of Technology
+    .
+                                                                   IMC '24: Proceedings of the 2024 ACM on Internet Measurement Conference (November 2024)
+                                                                                                                      hps://doi.org/10.1145/3646547.3688417
+                                                                                                                                         ISBN: 9798400705922
+.
+Rumors Stop with the Wise: Unveiling Inbound SAV Deployment
+              through Spoofed ICMP Messages
+                     Shuaicong Yu                                                Shuying Zhuang∗                                               Tao Yu
+         yusc22@mails.tsinghua.edu.cn                                     zhuangsy@mail.zgclab.edu.cn                                yutao@moe.edu.cn
+       Institute of Network Sciences and                                   Zhongguancun Laboratory                           Center for Information of Education
+        Cyberspace, Tsinghua University                                          Beijing, China                              Management, Ministry of Education
+                  Beijing, China                                                                                                            (CIEM)
+                                                                                                                                        Beijing, China
+
+                                                    Changqing An                                                  Jilong Wang
+                                              acq@tsinghua.edu.cn                                             wjl@cernet.edu.cn
+                                       Institute of Network Sciences and                              Institute of Network Sciences and
+                                        Cyberspace, Tsinghua University                               Cyberspace, Tsinghua University;
+                                                  Beijing, China                                           Quan Cheng Laboratory
+                                                                                                                 Beijing, China
+
+Abstract                                                                                              CCS Concepts
+In the era of increasing network-based threats, particularly IP spoof-                                • Security and privacy → Network security.
+ing, Source Address Validation (SAV) is paramount for network
+security. The effective deployment of Inbound Source Address Vali-                                    Keywords
+dation (ISAV) is crucial yet often inadequate, posing significant risks                               Network Measurement; Spoofing; Source Address Validation
+to Internet infrastructure. This study presents ICMP_Sonar, a mea-
+surement system that deploys "rumors"—carefully crafted spoofed                                       ACM Reference Format:
+ICMP packets—to probe the network’s defenses, revealing the "wise"                                    Shuaicong Yu, Shuying Zhuang, Tao Yu, Changqing An, and Jilong Wang.
+                                                                                                      2024. Rumors Stop with the Wise: Unveiling Inbound SAV Deployment
+networks with their robust ISAV implementations. ICMP_Sonar in-
+                                                                                                      through Spoofed ICMP Messages. In Proceedings of the 2024 ACM Internet
+troduces two novel approaches that exploit the characteristics of                                     Measurement Conference (IMC ’24), November 4–6, 2024, Madrid, Spain. ACM,
+ICMP unreachable messages and ICMP fragment needed messages,                                          New York, NY, USA, 15 pages. https://doi.org/10.1145/3646547.3688417
+and exhibits the advantages of high coverage, fine granularity, low
+error rates, and the ability to measure in both IPv4 and IPv6. We
+also evaluate the applicability and security risks of ICMP error mes-
+                                                                                                      1    Introduction
+sages. Through large-scale measurements, ICMP_Sonar successfully                                      IP spoofing [15] is a prevalent threat in large-scale Distributed
+covers 86M IPv4 hosts (0.8M IPv6 hosts), 3.5M IPv4 /24 subnets (24K                                   Denial of Service (DDoS) attacks [9][17][32][33]. With IP spoofing,
+IPv6 /40 subnets), and 59K IPv4 ASes (8.3K IPv6 ASes), surpassing                                     attackers manipulate the source address in packet headers to mask
+the state-of-the-art dual-stack method’s coverage by 16.2 (51.6), 2.9                                 their identity and location, facilitating anonymity and hindering
+(2.34), and 1.7 (1.7) times, respectively. The broad coverage across                                  traceability. For years, Source Address Validation (SAV) has emerged
+multiple granularities enables us to capture a more comprehensive                                     as a critical mechanism designed to prohibit attackers from using
+and fine-grained view of ISAV deployment. Measurements show                                           spoofed source addresses that fall outside the range of legitimately
+that while the percentage of ASes with no ISAV deployment is lower                                    advertised prefixes.
+than previously identified, the percentage of ASes with partial ISAV                                     RFC 2827 (BCP 38) [13] and RFC 3704 (BCP 84) [6] formalize the
+deployment is much higher, indicating significant gaps in overall                                     practice and urge Internet Service Providers (ISPs) to implement
+security. The analysis also reveals that ISAV deployment practices                                    SAV. Additionally, SAV is recommended in the Mutually Agreed
+vary across different networks and between IPv4 and IPv6.                                             Norms for Routing Security (MANRS) [4] initiative, which was
+                                                                                                      launched by the Internet Society (ISOC) [3] to improve the security
+∗ Corresponding   author.
+                                                                                                      and resilience of the global routing system.
+                                                                                                         SAV can be categorized into Outbound SAV (OSAV) and Inbound
+                                                                                                      SAV (ISAV) [22]. A network deploying OSAV discards outbound
+Permission to make digital or hard copies of all or part of this work for personal or
+classroom use is granted without fee provided that copies are not made or distributed                 packets with source addresses not belonging to the network, while
+for profit or commercial advantage and that copies bear this notice and the full citation             a network deploying ISAV drops inbound packets with source ad-
+on the first page. Copyrights for components of this work owned by others than the                    dresses that belong to the network. OSAV plays an important role
+author(s) must be honored. Abstracting with credit is permitted. To copy otherwise, or
+republish, to post on servers or to redistribute to lists, requires prior specific permission         in preventing a network from being the source of an attack, while
+and/or a fee. Request permissions from permissions@acm.org.                                           ISAV is crucial for protecting the network against incoming threats.
+IMC ’24, November 4–6, 2024, Madrid, Spain.                                                              Despite the significance of SAV, its implementation has not been
+© 2024 Copyright held by the owner/author(s). Publication rights licensed to ACM.
+ACM ISBN 979-8-4007-0592-2/24/11                                                                      satisfactory [22], which may be hindered by lack of awareness of
+https://doi.org/10.1145/3646547.3688417                                                               the spoof threat [18]. Besides, some network administrators are
+
+
+
+
+                                                                                                199
+IMC ’24, November 4–6, 2024, Madrid, Spain.                                             Shuaicong Yu, Shuying Zhuang, Tao Yu, Changqing An, & Jilong Wang
+
+
+concerned that deploying SAV may inadvertently impact legiti-                        also analyze the conditions under which the error may oc-
+mate network traffic, particularly in complex scenarios such as                      cur and demonstrate the low error probability of our two
+multi-homing [6][36]. Nevertheless, deploying SAV remains the                        measurement methods. The measurement results demon-
+best strategy for mitigating IP spoofing attacks. The absence of SAV                 strate the advantages of our methods in terms of dual-stack
+compromises the integrity and trustworthiness of network com-                        coverage and granularity.
+munications. In addition to DDoS attacks [38], it may also cause                 (3) We analyze the measurement results and find that a signifi-
+security issues, such as spoofing attackers being able to access                     cant portion of ISAV is deployed at subnet boundaries, and
+services that are only available for local clients [37].                             there are substantial differences in ISAV deployment across
+   Measuring the SAV deployment of individual networks and alert-                    IPv4 and IPv6, as well as among different networks.
+ing insecure networks to deploy SAV as soon as possible is an                    (4) We conduct a survey to investigate the actual deployment of
+important way to prevent spoofing attacks. However, the deploy-                      ISAV on the Internet, and the results confirm our measure-
+ment of SAV, particularly ISAV, is difficult to measure due to the                   ment findings.
+lack of Vantage Points (VP) and generalized measurement methods.
+                                                                                By mapping the landscape of ISAV deployment, we aspire to
+Although existing SAV measurement efforts have provided valu-
+                                                                             empower network administrators, policymakers, and cybersecurity
+able insights into the deployment and effectiveness of SAV across
+                                                                             professionals with the knowledge to fortify their defenses against
+the Internet, they face challenges such as reliance on voluntary
+                                                                             the ever-evolving threats in cyberspace. This paper delves into the
+participation, insufficient coverage on IPv4 and IPv6 networks, few
+                                                                             methodologies, findings, and implications of our research, providing
+measurable targets in large networks, and potential errors. Address-
+                                                                             a comprehensive examination of ISAV’s role in securing the Internet
+ing these challenges is crucial for developing a more comprehensive
+                                                                             infrastructure.
+and accurate understanding of global SAV implementation.
+   This study introduces two novel approaches implemented in
+ICMP_Sonar, a tool using meticulously crafted spoofed ICMP mes-              2    Related Work
+sages to detect the presence and efficacy of ISAV. Our ICMP_Sonar            Table 1 summarizes the existing measurement work on SAV deploy-
+relies on the feature that ICMP unreachable messages can prevent             ment, which can be divided into two approaches based on whether
+TCP retransmissions and the feature that ICMP fragment needed                VPs need to be deployed within target networks.
+messages can force the target to reply in fragments, offering high               One approach is to deploy VPs within the target network to send
+coverage across networks (59K/8.3K IPv4/IPv6 ASes and 3.5M/24K               or receive spoofed packets and detect the deployment of SAV. For
+IPv4/IPv6 subnets), fine granularity in finding a large number of            years, the Spoofer project [5][7][18][22] has contributed to recruit-
+measurable hosts (86M IPv4 hosts and 0.8M IPv6 hosts), low error             ing volunteers or renting workers from crowd-sourcing platforms
+rates, and the ability to measure in both IPv4 and IPv6.                     [20] to run the Spoofer client, which can be used to detect whether
+   Through large-scale measurement, the advantages of our meth-              it receives the spoofed packets that originate from the client’s net-
+ods have led to new discoveries: The extensive coverage provided             work, and thus accurately infer SAV deployment. However, it is
+by our dual-stack measurements enables us to identify significant            challenging to deploy VPs in any network, only about 2.2K IPv4
+differences in ISAV deployment across networks of varying hier-              ASes (0.7K IPv6 ASes) and 12K IPv4 /24 subnets (1.9K IPv6 /40
+archies, types, and geographical distributions. Additionally, ISAV           subnets) can be measured through the project. Although Spoofer
+deployment in IPv6 is notably less comprehensive than in IPv4.               provides a lower bound on the number of networks that fail to
+Moreover, the wealth of measurable targets within networks has               deploy SAV, it is still difficult to infer the SAV security of the entire
+highlighted both the prevalence and limitations of subnet-level              Internet.
+ISAV deployment strategies: although 60% of IPv4 ASes and 46%                    To overcome the difficulty in deploying VPs, another approach,
+of IPv6 ASes have deployed ISAV, only 11% of IPv4 ASes and 13%               which uses measurement techniques to remotely detect SAV de-
+of IPv6 ASes fully protect all of their subnets. Importantly, many           ployment without the need to deploy VPs in the target network,
+critical resources, such as top domains, remain unprotected. The             has become popular in recent years. For OSAV measurements, re-
+variability in ISAV deployment across different subnets indicates            searchers have developed methods such as examining loops found
+that the overall security of ASes is not impenetrable. Existing re-          in traceroute records and AS relationships [21], or using miscon-
+search often considers the security situation of ISAV across the             figured DNS forwarders [19][25] within the target network that
+Internet based on the AS-level deployment rate, which could lead             forward traffic originating from outside the network. Consider-
+to an overestimation of security situation of ISAV on the Internet.          ing that research [22] has shown the lack of ISAV is significantly
+   In this paper, we have made the following contributions:                  more widespread than OSAV (with 59.2-67.0% of ASes not filtering
+                                                                             inbound IPv4 traffic compared to 11.9-25.2% of ASes not filtering
+                                                                             outbound IPv4 traffic), our paper primarily focuses on measuring
+   (1) We propose two novel dual-stack methods, namely the ICMP              ISAV deployment.
+       unreachable method and the ICMP fragmentation method,                     Research on ISAV deployment has increased significantly in re-
+       for measuring the deployment of ISAV in the target network            cent years. Nosyk et al.[28] and Deccio et al.[12] utilized open DNS
+       without vantage points. We also conduct local experiments             resolvers within the target network for reflection-based measure-
+       on the applicability of our methods.                                  ments. Specifically, the researchers send a spoofed DNS query to the
+   (2) We validate the effectiveness and feasibility of these two            DNS recursive resolver within the target network. If the network
+       methods through large-scale measurement experiments. We               has not deployed ISAV, the DNS recursive resolver will receive this
+
+
+
+
+                                                                       200
+Rumors Stop with the Wise: Unveiling Inbound SAV Deployment through Spoofed ICMP Messages                         IMC ’24, November 4–6, 2024, Madrid, Spain.
+
+
+                    Method               SAV Type IPv4/v6 Relies on VP Relies on DNS Error Rate                                   Coverage
+                Spoofer[7][18][22]          both       both        yes            no        very low                                 low
+               Traceroute Loop[21]         OSAV        both        no             no          exist                                  low
+            DNS Forwarder[17][19][25]      OSAV        both        no             yes       very low                                 low
+            DNS Reflection[11][12][28]     ISAV        both        no             yes       very low                               medium
+                  IP-ID[11][34]            ISAV        IPv4        no             no          exist                              high in IPv4
+             TCP-based Fragment[11]        ISAV        IPv4        no             no        very low                             high in IPv4
+            ICMPv6 Rate Limiting[29]       ISAV        IPv6        no             no          exist                              high in IPv6
+               ICMP Unreachable            ISAV        both        no             no        very low                                high
+              Ping-based Fragment          ISAV        both        no             no        very low                                high
+                                Table 1: Previous research on the measurement of SAV deployment
+
+
+
+query and send a DNS query to the authoritative domain server                      subnets within an AS. However, the focus of this research is pri-
+controlled by the researchers. Their method can cover approxi-                     marily on identifying SAV implementation techniques instead of
+mately 35k IPv4 ASes (5k IPv6 ASes) and 1.2M IPv4 /24 subnets                      conducting large-scale SAV deployment measurements.
+(11k IPv6 /40 subnets). But this coverage is still not wide enough for                In this paper, we propose two complementary methods that lever-
+the measurement of Internet. Besides, it is not easy to reproduce                  age ICMP to overcome these limitations. Specifically, the methods
+because of the need to control an authoritative domain server.                     are the ICMP unreachable method and the ICMP fragmentation
+   Instead of relying on open DNS resolvers, researchers have no-                  method. On the one hand, ICMP has similar definitions under both
+ticed that the standard protocols employed in the Internet can be                  IPv4 and IPv6, allowing our two methods to support dual-stack
+also used to infer ISAV deployment. However, despite the con-                      measurements. On the other, ICMP is a widely used protocol for
+tributions of existing approaches, limitations remain in terms of                  network diagnostics, providing us with high coverage and fine
+inference accuracy and dual-stack applicability. More specifically,                granularity.
+T. Dai et al. [11] combined the DNS reflection method with newly
+proposed methods based on IP-ID (IP Identifier) and TCP-based                      3     Methodology
+fragmentation in "SMap", conducting a measurement of ISAV de-                      In this section, we present the two methods designed to detect ISAV.
+ployment across IPv4 networks. The IP-ID method takes advantage                    The applicability and specific application of the two methods will be
+of the globally incremental IP-ID counter of a host in the target                  discussed later in Sections 4 and 5. Our objective is to send packets
+network to detect whether it receives the spoofed packets. How-                    with spoofed source addresses to hosts within the target network
+ever, the use of global IP-ID counters is not widespread today, and                and verify whether the target hosts receive these packets, which
+noise in target networks may also lead to inaccurate detections. The               indicates the absence of ISAV in the target network.
+TCP-based fragmentation method uses a server that sets the Don’t                      Our two methods have their own advantages and scope of ap-
+Fragment (DF) bit in the IPv4 header in the target network to detect               plication. The ICMP unreachable method is supported by a wider
+whether it receives spoofed ICMP fragment needed messages, by                      range of target operating systems, but requires the targets to ac-
+checking the path MTU and DF bit. These methods, however, are                      cept TCP connections. The ICMP fragmentation method does not
+not applicable to IPv6 due to the absence of IP-ID and DF fields in                require a TCP connection, but only works on a limited range of
+the header of IPv6, whose ISAV deployment strategy and status may                  target operating systems. By employing both methods in a comple-
+differ from those of IPv4 networks. In terms of IPv6 measurement,                  mentary manner, we can cover a wider range of targets, enhancing
+Pan et al. [29] utilized ICMPv6 rate limiting to detect whether the                the overall effectiveness of our measurement.
+target network receives the spoofed packets by examining the ping
+reply rate. This technique also struggles with accuracy in noisy                   3.1      ICMP Unreachable Method
+environments and is inapplicable to IPv4, where ICMP rate limiting
+                                                                                   We first use the characteristic that ICMP unreachable messages
+is not defined.
+                                                                                   interrupt TCP connections to determine if a spoofed packet will be
+   Besides, granularity is also an important evaluation metric for
+                                                                                   dropped by the target network.
+both methods and analysis in SAV deployment studies. Although
+                                                                                      The ICMP unreachable method of ICMP_Sonar is illustrated in
+the above methods significantly expand measurement coverage
+                                                                                   Figure 1. Target host B is not protected by ISAV, and target host
+at AS-level, they either lack fine-grained measurement methods
+                                                                                   C is under the protection of ISAV. ICMP_Sonar (deployed on Host
+capable of measuring a sufficient number of measurable target
+                                                                                   A) performs identical probing tests on target host B and target
+hosts, or fall short in fine-grained analysis and discussion of SAV
+                                                                                   host C. The method sends a regular TCP syn packet and waits for
+deployment, which might lead to misunderstandings about the
+                                                                                   the target’s syn/ack response. Upon receiving the response, the
+actual deployment of SAV across networks. The significance of
+                                                                                   method promptly sends ICMP unreachable messages with spoofed
+fine-grained analysis has been recognized by researchers [34], who
+                                                                                   source address belonging to the target network with the received
+pointed out that the SAV techniques may vary among different
+                                                                                   response as the payload. Target host B will not retransmit because
+                                                                                   the corresponding connection is aborted by the ICMP unreachable
+                                                                                   message, and target host C is not affected because the spoofed
+
+
+
+
+                                                                             201
+IMC ’24, November 4–6, 2024, Madrid, Spain.                                              Shuaicong Yu, Shuying Zhuang, Tao Yu, Changqing An, & Jilong Wang
+
+
+
+
+    Figure 1: An overview of ICMP unreachable method.                            Figure 2: An overview of ICMP fragmentation method.
+
+
+packet is discarded by ISAV. Therefore, we can determine the ISAV              Transmission Unit (MTU) value, indicating the maximum size of
+deployment of target host B and target host C by whether they                  data service units they can accept. The ICMP fragment needed
+retransmit or not.                                                             message is initially defined in RFC 1191 [27] and RFC 1981 [26] for
+    ICMP unreachable messages are usually generated by a router or             Path MTU Discovery (PMTUD), which is used to find the minimum
+a host to inform the sender that the packet cannot be delivered to             MTU along an end-to-end path. If a forwarding device along the
+its destination address for reasons including network unreachable,             path has an MTU smaller than the length of the packet, the device
+host unreachable, no route, administratively prohibited, and so on.            will discard the packet and respond with an ICMP fragment needed
+The format of ICMP unreachable messages is essentially the same                message, indicating its acceptable MTU value in the "Unused" field
+in ICMPv4 [31] and ICMPv6 [10] (see Table 2). The recommended                  of the ICMP message.
+actions for hosts upon receiving such ICMP unreachable messages                   Similar to ICMP unreachable messages, ICMP fragment needed
+are also similar, which makes the method applicable to both IPv4               messages will also include the header of the received packet that
+and IPv6 networks. Specifically, the transport layer (e.g. TCP) should         triggered the MTU limitation, allowing the host to identify which
+respond to ICMP unreachable messages by directing them to the                  packet it sent triggered the MTU restriction. The outer source IP
+corresponding connection that triggered the error. In RFC 1122                 is also ignored by the host. Subsequently, after receiving ICMP
+[8], a typical practice for the host is to abort the corresponding             fragment needed messages, the host will take action depending on
+connection upon receiving such messages.                                       its operating system’s specific implementation, such as updating
+    ICMP unreachable messages always include the header of the                 the PMTU value of the specified IP in the routing table cache to
+packet that triggered the error as an inner payload. Thus, the target          the received MTU value. The cache in the routing table is typically
+host can match the inner 5-tuple with existing connections, and                set to expire within 10 minutes to avoid a prolonged impact on the
+respond accordingly based on the error type and specific implemen-             host. Not all hosts perform as described above, so we select the
+tation. It is worth noting that the forwarding device that issued the          measurement targets that perform as desired in Section 5.1.2.
+ICMP unreachable message is not a concern for the target host [23].
+In other words, the target host typically does not pay attention                        0              1               2              3
+to the source address of the received ICMP unreachable message,                        Type          Code                 Checksum
+making our measurements feasible. This is expected because, due                                   Unused / Next-Hop MTU
+to the dynamic nature of the Internet, the host finds it challenging                  Internet Header + Part of the Error-raising Package
+to identify whether the outer source IP (source IP of ICMP message)            Table 2: The format of ICMP unreachable message and ICMP
+belongs to a router along the forwarding path.                                 fragmentation message. They are different in type and code.
+                                                                               In the ICMP fragment needed message, "Unused" is set to the
+3.2     ICMP Fragmentation Method                                              value of Next-Hop MTU.
+In the ICMP fragmentation method, we use the feature that ICMP
+fragment needed messages can reduce the target PMTU to check
+whether the target network drops a spoofed packet.                                To find out whether the PMTU set by a remote host to our host is
+   The ICMP fragment needed message has a similar structure                    less than N, which indicates that the target has received the spoofed
+to the ICMP unreachable message, as shown in Table 2 (type=3,                  packet we sent, all we need to do is send a ping request to the target
+code=4 in ICMPv4, and type=2, code=0 in ICMPv6). Whether in                    host with a payload length of N bytes. The method does not require
+IPv4 or IPv6, hosts or routers in a network maintain a Maximum                 any reply to spoofed packets, and is only concerned with whether
+
+
+
+
+                                                                         202
+Rumors Stop with the Wise: Unveiling Inbound SAV Deployment through Spoofed ICMP Messages                          IMC ’24, November 4–6, 2024, Madrid, Spain.
+
+
+the ping replies are fragmented as a result of our measurement. If                 kernels in a local network. The results are shown in Table 4 and can
+the PMTU of the target host to our host is set to less than N, its                 be categorized into three groups. (1) Versions 2.6.32 to 3.5.0 of Linux
+ping reply will be fragmented. Our fragmentation method differs                    do not check whether the inner packet of an ICMP fragment needed
+from the one proposed by "SMap" [11] in that: 1. We can measure                    message is legitimate. Instead, they directly update the PMTU val-
+target hosts that do not accept TCP connections, which broadens                    ues in the routing table. This means that the inner header can be
+the scope of measurement. 2. We do not need to set DF (Don’t                       UDP or IP-only packets. (2) Versions 3.0.0 to 3.5.0 of Linux do not
+Fragment in IPv4), thereby gaining the capability to measure in                    update the existing PMTU in the routing table. This means that
+IPv6.                                                                              within the cache validity period, the systems accept only one ICMP
+   The ICMP fragmentation method of ICMP_Sonar is illustrated                      fragment needed message pointing to a specific IP. (3) Versions 3.6.0
+in Figure 2. The method sends an ICMP fragment needed message                      to 6.5.0 of Linux have the highest PMTU security. They only accept
+with spoofed source address in the target network and MTU field                    ICMP fragment needed messages if the inner protocol is TCP and
+set to 1300. A ping request with a length of 1328 bytes (20 bytes                  the inner 5-tuple matches an existing connection. This means that
+IP header + 8 bytes ICMP header + 1300 bytes payload) is sent                      the first two types of Linux versions could potentially become our
+a few seconds later. If the target network has not deployed ISAV                   measurement targets, as we do not establish connections before-
+(Target host B), the ping reply may fragment because the host’s                    hand. Besides, all versions share the same minimum PMTU values
+PMTU was decreased earlier. Otherwise, we would receive an un-                     (552 for ICMPv4 and 1280 for ICMPv6) and a cache expiration time
+fragmented ping reply because the earlier spoofed ICMP fragment                    of 600 seconds, which ensures that our measurements do not lead
+needed message was discarded by ISAV (Target host C).                              to permanent effects.
+                                                                                      Notably, the generalizability of our ICMP fragmentation method
+4     Applicability of ICMP Unreachable and                                        suggests that a significant number of hosts are still using older
+      Fragment Needed Messages                                                     versions of operating systems that do not follow the newer RFCs
+                                                                                   [14][24] that require checking 5-tuples. These hosts are still vulnera-
+In this section, we discuss the applicability and security risks of
+                                                                                   ble to fragmentation attacks, which can lead to network slowdowns
+ICMP unreachable messages and ICMP fragment needed messages.
+                                                                                   or even complete disruption. Additionally, attackers could exploit
+We conduct tests to evaluate the applicability of these messages in
+                                                                                   these action patterns to identify the target’s operating system ver-
+different scenarios to understand the conditions under which our
+                                                                                   sion and take advantage of vulnerabilities specific to those versions.
+measurement methods can cover targets effectively.
+                                                                                   5     Measuring Implementation
+4.1    ICMP Unreachable Message
+                                                                                   In this section, we design a comprehensive measurement process
+The applicability of our ICMP unreachable method depends on
+                                                                                   for ICMP_Sonar. The goal of this section is to realize large-scale
+whether the target host aborts the connection when it receives
+                                                                                   ISAV deployment measurements by using the above two methods.
+ICMP unreachable messages. We observe that different operating
+systems exhibit different action patterns upon receiving ICMP un-
+                                                                                   5.1      Finding Measurable Targets
+reachable messages. Since Windows hosts do not accept ICMP
+messages by default, we mainly tested different versions of Linux.                 To conduct large-scale measurements, we first need to find suffi-
+Table 3 shows the results of experiments run in a local web server                 cient measurable targets, which will take observable action upon
+environment on multiple distributions of different Linux kernels                   receiving the ICMP unreachable or fragment needed messages.
+(CentOS, Ubuntu, and Fedora), which are summarized into three                      5.1.1 Measurable Targets of ICMP Unreachable Method.
+categories: older versions of the Linux kernel (from 2.6.32 to 4.0.4),                While RFC 1122 [8] specifies that a TCP connection should be
+newer versions of the Linux kernel (from 4.5.5 to 6.5.0), and a special            aborted upon receiving ICMP unreachable messages, the implemen-
+4.2 Linux kernel that doesn’t accept any ICMP unreachable mes-                     tations of some hosts may deviate from the RFC, rendering them
+sages. Since our method uses a set of ICMP unreachable messages                    unsuitable for subsequent ISAV detection. Therefore, we aim to
+covering all defined codes, it is applicable to all the above systems              discover targets that not only support the establishment of TCP
+except 4.2.                                                                        connections but also perform retransmissions unless they receive
+   However, we notice that the actions taken on ICMP unreach-                      ICMP unreachable messages, which are denoted as measurable
+able messages with different error codes do not comply with the                    targets.
+recommendations provided in the RFC [8]: The host should not                          To know if a potential target qualifies as measurable, we perform
+abort the connection upon receiving messages with soft error (i.e.                 the following steps: (1) We start by sending a TCP syn to a target.
+code 0, 1, 5) or undefined code, but should abort the connection                   Measurable targets should respond to our probe via TCP syn/ack
+when receiving a hard error (i.e. code 2, 3, 4). Such deviations from              and perform retransmissions since we do not respond to the TCP
+the RFC recommendations not only cause inconsistencies in how                      syn/ack. Consequently, we should receive 𝑛 1 retransmission packets
+network devices respond to these messages but also potentially                     in this step. (2) We send a TCP syn again, and then send a set of
+degrade the reliability and predictability of network behavior.                    ICMP unreachable messages with normal source addresses to the
+                                                                                   target once we receive the TCP syn/ack. Measurable targets should
+4.2    ICMP Fragment Needed Message                                                interrupt the connection process and no longer retransmit. That is,
+To gain insight into the applicability of ICMP fragment needed                     we will receive 𝑛 2 retransmission packets in this step. In order to
+messages, we test various Linux distribution versions on different                 minimize the impact of possible packet loss in the first or second
+
+
+
+
+                                                                             203
+IMC ’24, November 4–6, 2024, Madrid, Spain.                                              Shuaicong Yu, Shuying Zhuang, Tao Yu, Changqing An, & Jilong Wang
+
+
+                                                       ICMPv4                             ICMPv6
+              Linux Kernel
+                                      Abort Connection                    Abort Connection
+                                                              Keep Connection                   Keep Connection
+            2.6.32 - 4.0.4         type=3 / code=0,1,2,3,5-15 type=3 / code=4,u    all                 none
+                  4.2                        none                    all         none                   all
+                                                                         type=1 / code=1,4-7,u type=1 / code=0,2,3
+             4.5.5 - 6.5.0      type=3 / code=0,1   type=3 / code=2-15,u
+                                                                           type=4 / code=all     type=3 / code=all
+Table 3: The action of receiving an ICMP unreachable message under different Linux kernel versions. "code=u" indicates a code
+outside the scope of the definition.
+
+
+                                         ICMPv4                          ICMPv6
+           Linux Kernel                                                                               PMTU Updatable          Cache Expire
+                               React on Socket Min PMTU        React on Socket Min PMTU
+            2.6.32 - 2.6.38           no                              no                                       yes
+             3.0.0 - 3.5.0            no          552                 no          1280                         no               600 seconds
+             3.6.0 - 6.5.0           yes                             yes                                       no
+Table 4: Acceptance conditions for ICMP fragment needed messages, minimum PMTU and cache expiration time for different
+Linux kernel versions.
+
+
+
+step, we consider a target measurable if 𝑛 1 − 𝑛 2 ≥ 2, which will be          sending the spoofed packet, because the spoofed packet was inter-
+discussed in Section 6.5.                                                      cepted by ISAV. Conversely, the "Packet not intercepted by ISAV"
+                                                                               indicates that the target received the spoofed packet and took ac-
+5.1.2 Measurable Targets of ICMP Fragmentation Method.                         tion. In cases where no TCP syn/ack or ping reply is received due to
+    Some hosts match the inner 5-tuple in the ICMP fragment needed             potential packet loss, we will conduct a re-measurement for these
+message with an existing connection before the PMTU can be                     targets. Specifically, for the very few targets where measurement
+lowered (as discussed in Section 4.2), which cannot be used to                 results conflict between the two methods, we consider those targets
+detect ISAV in this paper. We need to find target hosts that accept            as unmeasurable. We will analyze in detail where and how often
+ICMP fragment needed messages without checking.                                such conflicting results or potential measurement errors can occur
+    The ICMP fragmentation method follows similar steps to the                 in Section 6.5.
+ICMP unreachable method for finding measurable targets. (1) First,
+we send a ping with a payload length of N to potential targets.                5.3    Large-Scale Measurement Settings
+Measurable targets should reply without fragmentation; otherwise
+                                                                               We are able to conduct large-scale ISAV deployment measurement
+it cannot be distinguished from the fragmented reply of the second
+                                                                               experiments because the two methods used by our ICMP_Sonar
+step. (2) Second, we send an ICMP fragment needed message before
+                                                                               have the advantages of simplicity and speed, requiring minimal
+the ping. We construct the payload with a fake IP header where
+                                                                               packets to be sent to the target. Before obtaining a comprehensive
+the source IP is assigned as the target host’s IP, and the destination
+                                                                               view of ISAV deployment across the entire Internet, we need to
+address is our IP. This header serves as the payload for the ICMP
+                                                                               address a few issues.
+fragment needed message. If we receive fragmented ping replies,
+                                                                                  Which hosts are we measuring? In IPv4, there are approxi-
+we consider the target as measurable.
+                                                                               mately 232 IP addresses, and ICMP_Sonar is fully capable of scan-
+                                                                               ning all IPv4 addresses to obtain the most comprehensive measure-
+5.2     ISAV Detection                                                         ment results.
+After identifying measurable targets, we send spoofed probes to                   However, the vast number of IPv6 addresses makes full scanning
+these targets to determine whether they are protected by ISAV. The             impossible. Many previous IPv6 measurements used the existing
+process of spoofed probing is consistent with the methodology in               IPv6 hitlists as measurement targets. We use [35] and [39] as sources
+Section 3. We simply use the neighbor IP address of the target IP              for the IPv6 hitlists. One source [35] divides the IPv6 address space
+address as the spoofed source address.                                         into 3 regions based on the number of seed addresses and proposed
+   We take the responses received in the probe as our results. The             probing algorithms for each region. The other source [39] constructs
+results of our probing are categorized into the following two cate-            the IPv6 hitlist from various sources such as domain lists, FDNS,
+gories:                                                                        and others. They both offer regularly updated, publicly accessible
+                                                                               services of online active hitlists. During our measurement period,
+      • Packet intercepted by ISAV: Normal TCP retransmissions
+                                                                               these two hitlists contained 74 348 374 and 9 063 318 active IPv6
+        received. / Unfragmented ping reply received.
+                                                                               addresses, respectively.
+      • Packet not intercepted by ISAV: Fewer TCP retransmis-
+                                                                                  How fast should we conduct the measurements? Unlike
+        sions received. / Fragmented ping replies received.
+                                                                               the approach proposed in [29], our ICMP_Sonar does not require
+   The occurrence of the "Packet intercepted by ISAV" category                 sending a large number of packets to reach the ICMP rate limit
+indicates that there was no change in the target before and after              of the target router. Therefore, we can measure all target hosts
+
+
+
+
+                                                                         204
+Rumors Stop with the Wise: Unveiling Inbound SAV Deployment through Spoofed ICMP Messages                         IMC ’24, November 4–6, 2024, Madrid, Spain.
+
+
+                                       MTU Field         1450     1400      1350    1300      1250
+                                    Measurable Targets 262 980 265 435 265 940 266 568 267 766
+                          Table 5: Number of measurable targets in a /8 IPv4 network for different MTU field
+
+
+
+with lower probing overhead and a higher probing rate without                      6.1      Number and Distribution of Measurable
+worrying about adverse effects such as congestion on the target                             Targets
+network due to the large number of packets.
+                                                                                   We deployed ICMP_Sonar on three servers within the same network
+   However, there may be mutual interference between different
+                                                                                   that did not deploy OSAV and conducted large-scale measurements
+steps of experiments on the same target host. In the ICMP target
+                                                                                   from 2023.12 to 2024.1. We used the two proposed methods to
+unreachable method, the target host may be unwilling to reset the
+                                                                                   measure the entire IPv4 space and the IPv6 hitlists. Table 6 shows
+connection after multiple TCP syn/ack retransmissions, keeping
+                                                                                   the number of IPv4 and IPv6 targets covered by our measurements.
+the connection in the SYN-RCVD state for an extended period. In
+                                                                                   We can see that approximately 86M IPv4 hosts and 0.8M IPv6 hosts
+the ICMP fragmentation method, the target host usually caches the
+                                                                                   were measurable, meaning we could determine whether they were
+set PMTU value in the routing table for 600 seconds. To prevent
+                                                                                   protected by ISAV or not. In contrast, the DNS reflection-based
+interference between steps, there is a minimum 10-minute interval
+                                                                                   method [28], which is a state-of-the-art approach supporting dual-
+between each step of finding measurable targets and detecting ISAV,
+                                                                                   stack measurements, can only discover 5.3M IPv4 and 15.9K IPv6
+allowing the connection to be aborted and the PMTU cache in the
+                                                                                   measurable targets (i.e. open DNS resolvers). Our proposed method
+target host’s routing table to expire.
+                                                                                   discovers 16.2 (51.6) times more IPv4 (IPv6) measurable targets than
+   How do we determine the MTU value to be set? Different
+                                                                                   the DNS reflection-based method. Most other studies, on the other
+values of the MTU field (N in Section 3.2) in the ICMP fragmen-
+                                                                                   hand, do not specify a clear number of measurable targets.
+tation method may also affect the measurement results. An MTU
+                                                                                      Another thing worth noting is that the overlap of measurable
+value that is too high may exceed the original PMTU on the source-
+                                                                                   target hosts between the ICMP unreachable method and the ICMP
+destination forwarding path, resulting in the loss of potential mea-
+                                                                                   fragmentation method is very small, with only 2 366 829 targets,
+surable targets. An ICMP fragment needed message with an MTU
+                                                                                   accounting for just 2.73% of the total measurable targets. This can
+value that is too low may be rejected by some targets and become
+                                                                                   be explained by the different requirements each method has for the
+ineffective (e.g., the minimum PMTU is restricted to 1280 in IPv6).
+                                                                                   targets, as demonstrated in the results of Section 4. The ICMP un-
+   To investigate whether the setting of the MTU field will have an
+                                                                                   reachable method requires targets that accept connections and sup-
+impact, we randomly select an IPv4 /8 block to experiment with
+                                                                                   port retransmission on certain ports, while the ICMP fragmentation
+the different MTU field values. The numbers of measurable targets
+                                                                                   method needs targets that can accept IP-based ICMP fragmentation
+within the target network are shown in Table 5. The result demon-
+                                                                                   needed messages, which is supported by older system versions.
+strates that MTU field values within the range of 1250-1450 have
+                                                                                   Because these two methods cover different sets of targets, they
+a limited impact (no more than a 2% difference) on the number of
+                                                                                   complement each other well, resulting in a more comprehensive
+measurable targets. Ultimately, we choose 1300 (above the mini-
+                                                                                   measurement. This result also indicates that a significant portion
+mum limit of 1280 bytes for IPv6) as our MTU field value for both
+                                                                                   of Linux servers running common services (such as HTTP, DNS,
+IPv4 and IPv6.
+                                                                                   etc.) are immune to ICMP fragmentation attacks [23] due to the use
+   How do we set the port number? In terms of the ICMP un-
+                                                                                   of newer system versions.
+reachable method, the coverage of the measurement is closely re-
+                                                                                      We also analyze the distribution of measurable targets across
+lated to the destination port in the TCP syn packet. Only if the
+                                                                                   different aggregation levels of networks (specific network coverage
+corresponding port is open and accepts our connection request
+                                                                                   will be discussed later in Section 6.2). Figure 3a and Figure 3b plot
+can it serve as our potential measurement target. In our study, we
+                                                                                   the distribution on the number of measurable targets within each
+select 4 commonly used ports as the destination ports for our mea-
+                                                                                   measurable AS and measurable subnet. The results show that 92.29%
+surements, namely ports 22 (SSH), 53 (DNS), 80 (HTTP), and 443
+                                                                                   of ASes and 81.65% /24 subnets in IPv4, as well as 67.67% of ASes
+(HTTPS). It is worth noting that our method is not restricted to
+                                                                                   and 60.56% /40 subnets in IPv6 have multiple measurable hosts.
+these ports alone. We can select any open destination port for our
+                                                                                   Our fine-grained measurement methods capable of measuring a
+measurements.
+                                                                                   sufficient number of target hosts make our results more reliable.
+                                                                                      In addition to the significant advantages in quantity, the geo-
+                                                                                   graphic distribution of the measurable targets is relatively broad
+                                                                                   and balanced, indicating that our ISAV measurements exhibit low
+6    Measurement Results and Analysis                                              bias. We map each measurable target to a geographic continent
+In this section, we first present the number and distribution of                   based on CAIDA AS organization data [1]. Figure 3c plots the ratio
+measurable targets to demonstrate the broad coverage and low bias                  of measurable ASes per continent. There is no excessive disparity
+of our methods. We then present and analyze the deployment of                      in measurable proportions across continents in the figure, which
+ISAV across the entire Internet. Finally, we analyze potential errors              suggests that the distribution of our measurable targets across
+in our methods, and conduct a survey to investigate the real status                continents is relatively balanced. The broad and balanced continen-
+of ISAV on the Internet.                                                           tal coverage of our methodology demonstrates its effectiveness in
+
+
+
+
+                                                                             205
+IMC ’24, November 4–6, 2024, Madrid, Spain.                                                                Shuaicong Yu, Shuying Zhuang, Tao Yu, Changqing An, & Jilong Wang
+
+
+                 Method_Port                 Unreach_22         Unreach_53         Unreach_80      Unreach_443    Unreach_ANY         Frag_ANY      Both_ANY
+              IPv4 Measurable IP              18 209 220         4 416 419          33 675 241      23 320 102     53 361 644         35 687 347    86 682 162
+              IPv6 Measurable IP               249 363             22 601            312 187         242 420         684 131           143 605       820 768
+Table 6: The number of measurable hosts for different methods. ’Port’ refers to the destination port of the TCP syn in the ICMP
+unreachable method.
+
+
+
+
+       a CDF of ASes with different numbers of                     b CDF of /24, /40 subnets with different           c Ratio of measurable ASes to total ASes
+       measurable hosts.                                           numbers of measurable hosts.                       for each continent.
+
+                                                 Figure 3: Distribution of measurable targets in IPv4 and IPv6.
+
+
+capturing a comprehensive and representative snapshot of ISAV                                    Expanding the IPv6 hitlist would likely increase our measurement
+deployment.                                                                                      coverage, yielding a more thorough representation of IPv6 network
+                                                                                                 security.
+6.2       ISAV Deployment Overview                                                                  Compared to previous work, our method achieves quite high
+The measurable targets can be used to verify whether it can receive                              coverage in both IPv4 and IPv6, as well as at different granularity
+spoofed packets, i.e., determining whether the network where it is                               levels, including AS level and subnet level. The state-of-the-art
+located deploys ISAV. We aggregate the IP-level results and define                               ISAV measurement method that supports dual-stack measurements,
+the following three categories of network-level results:                                         known as the DNS reflection-based method [28], obtained measure-
+                                                                                                 ment results with a coverage of 34.8K ASes and 1.2M /24 subnets
+       • No ISAV: This category indicates that all measurable hosts
+                                                                                                 under IPv4, as well as 4.9K ASes and 10.6K /40 subnets under IPv6.
+         within the AS/Subnet are shown to be unprotected by ISAV.
+                                                                                                 In contrast, our method improves the number of covered ASes and
+         The network lacks defense against spoofing attacks.
+                                                                                                 subnets by about 69% and 193% in IPv4, and about 71% and 134%
+       • Deployed ISAV: This category indicates that all measurable
+                                                                                                 in IPv6, respectively. Although [11] in IPv4 (58K) and [29] in IPv6
+         hosts within the AS/Subnet are shown to be protected by
+                                                                                                 (9.7K) have AS-level coverage similar to ours respectively, they
+         ISAV. The network is secure in our measurement.
+                                                                                                 can only measure single-stack networks, and the accuracy of their
+       • Partial ISAV: This category indicates that measurable hosts
+                                                                                                 measurements depends on the quietness of the target network. As a
+         within the AS/Subnet show inconsistent measurement re-
+                                                                                                 comparison, we also discuss the accuracy of our methods in Section
+         sults. The network is most likely not deploying ISAV at its
+                                                                                                 6.5. The coverage can be attributed to the generalizability of our
+         boundary but only performing filtering at the ingress of
+                                                                                                 methods for finding sufficient measurable hosts, which enables us
+         smaller network segments1 . Thus, these networks can only
+                                                                                                 to obtain reliable measurement results with a broader coverage and
+         protect some of the internal hosts from spoofing attacks.
+                                                                                                 finer granularity.
+   Table 7 presents the aggregated results. The aggregation levels                                  Our measurement results show that about 60% IPv4 ASes and
+are AS level and Subnet level (/24 subnet in IPv4 and /40 subnet                                 46% IPv6 ASes have deployed (or partially deployed) ISAV, which is
+in IPv6). Some networks are categorized as Partial ISAV, when                                    much higher than previously reported. According to the limited-
+different hosts (measurable in only one of the methods) exhibit                                  coverage measurement results of the DNS reflection-based method
+different ISAV results. That is why in some cases the number of                                  [28], only 39% of measurable IPv4 ASes and 5% of measurable IPv6
+"both" is lower than the number of separate methods.                                             ASes have deployed ISAV. Moreover, the state-of-art IPv4-specific
+   Our measurement methods cover a total of 58 891 IPv4 ASes and                                 "SMap" method [11] found that less than 20% of the measurable
+8364 IPv6 ASes. Additionally, our methods also cover 3.5M IPv4 /24                               ASes (58K) deploy ISAV, and the state-of-art IPv6-specific method
+subnets and 24K IPv6 /40 subnets. It is important to recognize that                              [29] found that about 33% of the measurable ASes (9.7K) deploy
+the relatively lower network coverage in IPv6 than IPv4 primarily                                ISAV. In addition, the proportion of ASes that partially deploy ISAV
+stems from our focused probing on targets within the IPv6 hitlists.                              in our measurements is relatively higher compared to other studies,
+                                                                                                 with 49% IPv4 ASes and 33% IPv6 ASes, respectively.
+1A   portion of the filtering with very little protection is just user-level NAT [22].
+
+
+
+
+                                                                                         206
+Rumors Stop with the Wise: Unveiling Inbound SAV Deployment through Spoofed ICMP Messages                         IMC ’24, November 4–6, 2024, Madrid, Spain.
+
+
+             IP Version                      Method
+                             Aggregation Level              No ISAV            ISAV      Partial ISAV        Sum
+                                             unreach        29 414 0.52       6028 0.11   20 891 0.37       56 333
+                               AS              frag         11 705 0.31       6417 0.17   19 455 0.52       37 577
+                                              both          23 700 0.40       6509 0.11   28 682 0.49       58 891
+                                             unreach     1 457 263 0.55     939 476 0.36 242 602 0.09    2 639 341
+             IPv4          Subnet /24          frag        637 350 0.29     818 354 0.37 728 805 0.33    2 184 509
+                                              both       1 406 663 0.40   1 161 444 0.33 959 344 0.27    3 527 451
+                                             unreach 24 339 229 0.46 29 022 415 0.54           -    -   53 361 644
+                              Host             frag     13 748 455 0.39 21 938 892 0.61        -    -   35 687 347
+                                              both      36 690 985 0.42 49 991 177 0.58        -    -   86 682 162
+                                             unreach         4428 0.58          950 0.12   2226 0.29         7604
+                               AS              frag          1610 0.49          845 0.26     839 0.25        3294
+                                              both           4518 0.54        1115 0.13    2731 0.33         8364
+                                             unreach        11 506 0.59       3797 0.19    4364 0.22        19 667
+             IPv6          Subnet /40          frag          4007 0.43        3584 0.38    1738 0.19         9329
+                                              both          12 775 0.52       6062 0.25    5886 0.24        24 723
+                                             unreach       257 352 0.38     426 779 0.62       -    -      684 131
+                              Host             frag         82 138 0.57      61 467 0.43       -    -      143 605
+                                              both         334 652 0.41     486 116 0.59       -    -      820 768
+Table 7: Aggregated results of large-scale measurements. Each item in the results includes the corresponding number and
+percentage. The percentage is calculated based on the "Sum" column, which refers to the sum of the three categories of
+network-level results in each row. Besides, the results of the ICMP target unreachable method and the ICMP fragmentation
+method are displayed on separate rows, while "both" shows the union of the results from both methods.
+
+
+                        Measurement Targets Time         No ISAV       ISAV      Partial ISAV Sum
+                           DNS-reflection       2020 21 314 0.61 2092 0.06 11 441 0.33 34 847
+                              Our DNS           2024 20 095 0.54 4729 0.13 12 048 0.33 36 872
+                             Our Total          2024 23 700 0.40 6509 0.11 28 682 0.49 58 891
+Table 8: Comparison of AS-level results with DNS-reflection method in IPv4. "Our DNS" refers to the measurement results of
+our targets that are also measurable to the DNS-reflection method, while "Our Total" represents the results for all our targets.
+
+
+
+    We use the numerical comparison with the the DNS reflection-                   of ASes with ISAV partially deployed is much higher compared to
+based method [28] as an example to explain the possible reasons                    their measurements. Therefore, the widely distributed measurable
+for such a significant discrepancy in measurement results. We filter               targets (as shown in Figure 3) of our methods can help identify
+out the 4.4M IPv4 measurable targets in our dataset that have port                 ASes with partial ISAV more accurately, i.e., capturing subnet-level
+53 open, which should represent the upper limit of the number                      deployment strategies.
+of targets in our dataset that meet their method’s requirements
+(i.e. open DNS resolvers). The remaining 82M measurable targets                    6.3      Deployment Status of ISAV
+are exclusive to our approaches. The aggregated AS-level results
+                                                                                   In the following, we analyze the measured results of ISAV deploy-
+for these targets are listed in Table 8. According to this table, the
+                                                                                   ments to detail how different ASes implement ISAV and the factors
+measurement results from the 4.4M targets reveal that 54% of ASes
+                                                                                   that influence deployment practices.
+have not deployed ISAV, while the remaining 13%/33% of ASes
+have fully/partially deployed ISAV. Compared to the overall mea-                   6.3.1 Network administrators tend to deploy ISAV at the boundaries
+surement results reported in [28], there are only a small part of                  of smaller-scale networks rather than at the boundaries of ASes.
+ASes that did not deploy ISAV have deployed ISAV over the years,                      The large proportion of ASes with partial ISAV indicates that
+while the proportion of ASes with partial ISAV deployment has                      the ISAV deployment status varies among different subnets within
+remained unchanged. In addition, we also analyze the number of                     many ASes. This may be attributed to constraints in network topol-
+measurable hosts in each AS for those limited targets, and only                    ogy, routing policies, or administrative factors. Moreover, we also
+47.86% of ASes have more than one measurable host (significantly                   find that a much larger proportion (27.2% for IPv4 and 23.8% for
+lower than 92.29% of ASes for all targets in Figure 3a). The limited               IPv6) of measurable subnets exhibit partial ISAV deployment com-
+or biased measurable targets may result in misclassifying partially                pared to previous results (14.4% for IPv4 and 1.2% for IPv6) based
+deployed ISAV as deployed or not deployed. In contrast to the mea-                 on the DNS reflection-based method [28]. This indicates that ISAV
+surements from the limited targets, our 82M exclusive measurable                   might be deployed in networks smaller than /24 IPv4 subnets and
+targets help identify a completely different result, i.e. the number               /40 IPv6 subnets.
+
+
+
+
+                                                                             207
+IMC ’24, November 4–6, 2024, Madrid, Spain.                                               Shuaicong Yu, Shuying Zhuang, Tao Yu, Changqing An, & Jilong Wang
+
+
+
+
+Figure 4: CDF graph of proportion of subnets that deployed                                                a ASRank in IPv4
+ISAV in PARTIAL_ISAV ASes.
+
+
+   In addition, we plot the CDF on the proportion of subnets that
+deployed ISAV per PARTIAL_ISAV AS (see Figure 4), which serves
+as an indicator of the security ratio of these PARTIAL_ISAV ASes.
+We observe that over 80% of the PARTIAL_ISAV ASes have less
+than half of their subnets deploying ISAV. This result suggests that
+while these ASes have initiated measures to implement ISAV, the
+coverage within their networks is significantly incomplete, which
+                                                                                                          b ASRank in IPv6
+may not effectively mitigate the risks associated with IP spoofing.
+The low subnet deployment rates within these PARTIAL_ISAV ASes
+indicate that fine-grained measurement and analysis better reflect              Figure 5: CDF graph of ISAV deployment across different
+the actual situation of ISAV deployment.                                        ASRanks.
+
+6.3.2 Networks of different levels, locations, and categories exhibit
+significant differences in ISAV deployment.                                     IPv4 compared to other categories. This result is expected, as IT
+   AS tier and AS rank: AS tier [16] represents its position in the             companies or ISPs should have a better understanding of spoofing
+Internet hierarchy. Higher-tier ASes (e.g. clique) are closer to the            attacks and SAV. In contrast, "Education and Research" ASes per-
+core of the Internet, while lower-tier ASes (e.g. stub tier) are closer         form relatively better in IPv6 deployment. This could be due to the
+to the edge. Table 9 illustrates the disparities in ISAV deployment             fact that a significant part of the current IPv6 development is being
+across different AS tiers. Higher-tier ASes in both IPv4 and IPv6               driven by the academic community.
+networks exhibit a higher deployment rate of ISAV, including both                  Geographic location: To further explore the differences in
+deployed and partially deployed implementations. In contrast, stub              ISAV deployment across different geographic locations, we map
+tier ASes have a notably lower rate of ISAV deployment compared to              the measurable targets to countries and plot a heatmap that illus-
+other tiers. Taking the IPv4 network as an example, the deployment              trates the level of spoof vulnerability across countries (see Figure 7).
+rate in clique ASes is 89%, which is 62% higher than that of stub-tier          Differences in the rate of (full or partial) ISAV deployment across
+ASes (55%). Moreover, higher-tier ASes are more likely to implement             countries are not significant in IPv4. However, in IPv6, the deploy-
+subnet-level deployment strategies, i.e., partial ISAV.                         ment rate varies widely from country to country. Some countries
+   The trend is also reflected in ASRank [2], which is established              in Africa and South America exhibit poorer ISAV deployment rates,
+by CAIDA based on the customer cone size of ASes. We obtained                   making their networks more susceptible to attacks. This dispar-
+the latest ASRank dataset from CAIDA in 2024.02 and compared it                 ity highlights the need for a more globally coordinated effort to
+with our ISAV measurement results. Figure 5 plots the distribution              enhance ISAV implementation and bolster overall cybersecurity
+of ISAV deployment across different AS rankings. We can see that                defenses against spoofing attacks.
+under both IPv4 and IPv6 networks, ASes with "ISAV" and "PAR-
+TIAL_ISAV" are predominantly concentrated at higher-ranking                     6.3.3 Networks differ significantly in their ISAV deployments under
+levels. This trend indicates that ASes with larger scale and greater            IPv4 and IPv6.
+influence are more likely to implement ISAV-related security mea-                  Currently, the status of ISAV deployment is better in IPv4 com-
+sures. In contrast, lower-rank ASes might relatively lack awareness             pared to IPv6. The data in Table 7 show that 40% of measurable IPv4
+of security defenses against spoofing attacks.                                  ASes have not deployed ISAV at all, whereas in IPv6, this figure rises
+   AS type: ASes categorized as different types may also adopt                  to 54%. Figure 7 provides a more visual representation of differences
+distinct ISAV deployment practices. We obtain AS type data from                 in the geographic distribution of security against spoofing attacks
+the Stanford ASdb Dataset [40] and list the ISAV deployment status              for IPv4 and IPv6. We also compare the discrepancies in ISAV de-
+for typical AS types in Figure 6. There are clear differences in ISAV           ployment within the same ASes: Only 49% of networks that have
+deployment across different AS types. "Computer and Information                 deployed (or partially deployed) ISAV in IPv4 have also deployed
+Technology" ASes show significantly better deployment rates in                  ISAV in IPv6; in contrast, 92% of networks that have deployed (or
+
+
+
+
+                                                                          208
+Rumors Stop with the Wise: Unveiling Inbound SAV Deployment through Spoofed ICMP Messages                        IMC ’24, November 4–6, 2024, Madrid, Spain.
+
+
+                                          Tier
+                                 IP Version        No ISAV          ISAV     Partial ISAV Sum
+                                         clique     2     0.11    1    0.06    15      0.83     18
+                                       high tier   179    0.13 199 0.15       951      0.72   1329
+                              IPv4
+                                        low tier  1865 0.19 755 0.08 7130              0.73   9750
+                                       stub tier 21 327 0.45 5459 0.12 20 281 0.43 47 067
+                                         clique     1     0.06    1    0.06    16      0.88     18
+                                       high tier   240    0.27 150 0.17       488      0.56    878
+                              IPv6
+                                        low tier  1625 0.50 412 0.13 1216              0.37   3253
+                                       stub tier  2409 0.62 514 0.13          951      0.25   3874
+Table 9: AS Tier distribution of ISAV measurable ASes. "Sum" is the sum of the first three items, representing the number of
+measurable ASes.
+
+
+
+
+                                  a ISAV deployment in IPv4                                 b ISAV deployment in IPv6
+
+                                            Figure 6: ISAV deployment status for typical AS types.
+
+
+
+
+                            a IPv4 world heatmap                                                  b IPv6 world heatmap
+
+                   Figure 7: World heatmap of spoof vulnerability. Brighter colors indicate higher vulnerability.
+
+
+partially deployed) ISAV in IPv6 have also deployed ISAV in IPv4.                  Deploying ISAV for these domains is critical to maintaining the
+This may indicate that network administrators, when deploying                      security and reliability of the Internet.
+SAV, focus more on the security of IPv4 and selectively neglect                       We obtained the Tranco top 1 million domain dataset [30] in
+IPv6.                                                                              2024.03 as our measurement targets. We acquire IP addresses for
+                                                                                   these domains through DNS queries and then conduct measure-
+                                                                                   ments on these IP addresses. The measurement results for these top
+6.4    Case Study: ISAV Status of Top Domain                                       domains are shown in Table 10. We obtain measurement results for
+To illustrate the impact of missing ISAV deployments on critical                   205 124 IPv4 domains and 9428 IPv6 domains. Even for such critical
+network infrastructure, we analyze the extent to which top domains                 infrastructure as the top 1M domains, only 54% of measurable IPv4
+are vulnerable to spoofing. Top domains are particularly important                 domains and 16% of measurable IPv6 domains are protected.
+because they often host critical services such as commerce, gov-
+ernment, and education, and tend to suffer from spoofing attacks.
+
+
+
+
+                                                                             209
+IMC ’24, November 4–6, 2024, Madrid, Spain.                                                Shuaicong Yu, Shuying Zhuang, Tao Yu, Changqing An, & Jilong Wang
+
+
+          IP Version    NO_ISAV         ISAV                                    Limiting [29] require the target network to be relatively quiet. In
+              IPv4     95 064 0.46 110 060 0.54                                 active network environments, these methods may struggle to detect
+              IPv6      7887 0.84    1541    0.16                               subtle anomalies because the small number of spoofed packets they
+   Table 10: ISAV deployment of Tranco top 1M domains                           send may fail to cause a detectable change in IP-ID sequences or
+                                                                                ICMPv6 response rates. As a result, these methods can lead to
+                                                                                incorrect assessments of SAV deployment. In contrast, our ICMP-
+                                                                                based methods are less dependent on external datasets and network
+                                                                                quietness.
+                                                                                    Besides, our method exhibits a certain resilience to packet loss
+                                                                                caused by factors such as host configuration or firewall settings.
+                                                                                For the ICMP fragmentation method, in most cases, packet loss
+                                                                                results merely in the absence of a ping response, prompting us to
+                                                                                re-measure the target. As for the ICMP unreachable method, we
+                                                                                analyze the number of TCP retransmissions before and after ICMP
+                                                                                unreachable messages are received in large-scale measurements,
+    a Top domain with IPv4 IP                 b Top domain with IPv6 IP         i.e., the value of 𝑛 1 and 𝑛 2 defined in Section 5.1.1. Errors in both 𝑛 1
+                                                                                and 𝑛 2 due to packet loss can lead to incorrect target identification.
+Figure 8: ISAV deployment rates of top domains under dif-                       Therefore, it is critical to set a suitable threshold for the difference
+ferent domain ranks                                                             between 𝑛 1 and 𝑛 2 to determine the measurable hosts. The larger the
+                                                                                threshold, the less likely the method is to be affected by a false low of
+                                                                                𝑛 2 because of packet loss. However, setting the threshold too large
+   To investigate whether domains with higher popularity are more               may miss some measurable targets. To determine an appropriate
+likely to be protected by ISAV, we divide the top 1M domains equally            threshold, we explore the distribution of 𝑛 1 − 𝑛 2 in large-scale
+into 10 sets according to their popularity rankings and plot the ISAV           measurements (Figure 9). We observe that, in IPv4, 94.23% of the
+deployment ratio of each set in Figure 8. We observe that the top               measurable hosts have a count of TCP retransmission difference
+400 000 domains exhibit similar ISAV deployment rates in both IPv4              of more than one. Meanwhile, the proportion rises to 99.2% in
+and IPv6 networks. As for the remaining domains, lower-ranked                   IPv6, with the vast majority concentrating on 6 retransmissions.
+domains show progressively lower ISAV deployment rates for IPv6                 Therefore, we set the threshold of 𝑛 1 −𝑛 2 to 2 to minimize the effect
+networks, while in IPv4 networks, the deployment rates remain                   of false low of 𝑛 2 , while maintaining a large amount of measurable
+relatively consistent across all popularity ranks. This suggests that           targets. This resilience is crucial, as it ensures that our measurement
+networks hosting higher-ranked domains place a similar emphasis                 accuracy is maintained despite the common network issues that
+on the security for both IPv4 and IPv6, whereas networks hosting                can affect data transmission.
+lower-ranked domains do not maintain this consistency, i.e. placing                 Additionally, for the ICMP unreachable method, the delayed
+less emphasis on IPv6 domain security than on IPv4.                             arrival of ICMP unreachable messages can produce errors that need
+   However, even for the IPv4 top 1M domains, the ISAV deploy-                  to be taken into account. The issue of the ICMP unreachable method
+ment rate is still far from satisfactory. To further explore the will-          stems from the requirement that we must receive a response packet
+ingness of ASes to protect top domains from spoofing attacks, we                from the target and then take it as the inner packet of our ICMP
+compare the security status of top domains with the security status             unreachable message. If the target’s retransmission interval exceeds
+of the ASes in which these domains reside. We discover that among               the round-trip time (RTT) of packet transmission, the target may
+the 7413 IPv4 ASes (339 in IPv6) with partial ISAV that contain the             only receive the ICMP unreachable message after initiating a new
+measurable top domains, 83% IPv4 ASes (80% in IPv6) include at                  retransmission. This timing discrepancy will lead to the mistaken
+least one top domain not protected by ISAV, and 54% IPv4 ASes (56%              conclusion that the target did not receive the ICMP unreachable
+in IPv6) fail to protect any top domain at all. This indicates that             message, potentially misclassifying the target’s behavior. To verify
+the partial ISAV deployment strategy is relatively unsafe, as most              the likelihood of such delayed errors, we analyze the time intervals
+ASes with partial ISAV cannot successfully secure their critical net-           of TCP retransmissions for the targets. We find that 96.79% of
+work infrastructure. More optimal subnet-level ISAV deployment                  the IPv4 target hosts and 99.45% of the IPv6 target hosts wait for
+strategies still need further exploration.                                      1000ms or more before the first retransmission, while 97.83% RTTs
+                                                                                for TCP in our measurement fall below 1000ms. The analysis results
+6.5     Potential Measurement Error Analysis                                    indicate that our ICMP unreachable method has a high probability
+Our two methods, the ICMP unreachable method and the ICMP                       of avoiding errors caused by delay and packet loss.
+fragmentation method, tend to produce fewer errors compared to
+some other techniques. This is because some methods, such as
+those relying on AS relationship inference (e.g., methods based on              6.6    Survey on ISAV deployment
+traceroute loops [21]), depend heavily on the accuracy of existing              To gain insights into the practical considerations of network admin-
+AS relationship datasets. If these datasets are outdated or incorrect,          istrators when deploying SAV, we sent a survey to AS administrators
+the reliability of the measurements can be compromised. On the                  via email. The specific content of the survey can be found in the
+other hand, methods like those based on IP-ID [11] or ICMPv6 Rate               appendix C. In total, we received 32 valid responses from different
+
+
+
+
+                                                                          210
+Rumors Stop with the Wise: Unveiling Inbound SAV Deployment through Spoofed ICMP Messages                                   IMC ’24, November 4–6, 2024, Madrid, Spain.
+
+
+                                                                                      While our study has provided valuable insights, it also highlights
+                                                                                   areas for future improvement. First, the hitlists limit the breadth of
+                                                                                   our measurement coverage in IPv6. Second, our methods focus only
+                                                                                   on whether the target network intercepts the spoofed packets we
+                                                                                   send, without delving into the specific mechanisms of SAV deployed
+                                                                                   by the targets (such as ACL or uRPF). These are issues we hope to
+                                                                                   address in our future work.
+      a Distribution in IPv4.              b Distribution in IPv6.
+                                                                                   Acknowledgement
+Figure 9: Distribution of the difference in the number of                          We would like to express our sincere gratitude to the shepherd
+TCP retransmissions before and after ICMP unreachable                              and all anonymous reviewers for their valuable comments and sug-
+messages are received by targets in the large-scale measure-                       gestions. Their insightful feedback has significantly improved the
+ments.                                                                             quality of this manuscript. This work is supported by the National
+                                                                                   Key Research and Development Program of China under Grant
+                                                                                   No.2020YFE0200500.
+
+ASes, of which 20 ASes have partially or fully deployed SAV, and                   References
+the remaining 12 ASes have not deployed SAV.                                        [1] 2024. AS Organizations. https://publicdata.caida.org/datasets/as-organizations/
+   All 20 ASes claim to have deployed SAV in IPv4, while only 17                        (2024).
+                                                                                    [2] 2024. CAIDA AS rank. https://asrank.caida.org.
+of them also have deployed it in IPv6, which is consistent with                     [3] 2024. Internet Society (ISOC). https://www.internetsociety.org/ (2024).
+our analysis in Section 6.3.3. With respect to the location of de-                  [4] 2024. Mutually Agreed Norms for Routing Security (MANRS). https://manrs.org/
+                                                                                        (2024).
+ployment, 13 ASes have deployed SAV at subnet boundaries for                        [5] 2024. Spoofer. https://www.caida.org/projects/spoofer/ (2024).
+reasons including: 1. Ease of management, or the administrator’s                    [6] Fred Baker and Pekka Savola. 2004. RFC 3704: Ingress filtering for multihomed
+management scope is limited to subnets. 2. Selective deployment of                      networks.
+                                                                                    [7] Robert Beverly and Steven Bauer. 2005. The Spoofer project: Inferring the extent
+SAV in certain subnets of the AS due to reasons like multi-homing                       of source address filtering on the Internet. In Usenix Sruti, Vol. 5. 53–59.
+in some subnets. 3. To regulate traffic between subnets. Regarding                  [8] Robert Braden. 1989. RFC 1122: Requirements for Internet hosts-communication
+the specific implementation of SAV, 9 ASes have solely used ACL                         layers.
+                                                                                    [9] Jonas Bushart and Christian Rossow. 2018. DNS unchained: Amplified application-
+(Access Control List) to filter spoofed traffic, without employing                      layer DoS attacks against DNS authoritatives. In Research in Attacks, Intrusions,
+uRPF (Unicast Reverse Path Forwarding), which is considered more                        and Defenses: 21st International Symposium, RAID 2018, Heraklion, Crete, Greece,
+                                                                                        September 10-12, 2018, Proceedings 21. Springer, 139–160.
+flexible and effective in large ISPs [36][6].                                      [10] A Conta. 1998. RFC 2463: ICMP for the Internet Protocol version 6 (IPv6).
+   The survey results indicate that the current deployment of SAV                  [11] Tianxiang Dai and Haya Shulman. 2021. Smap: Internet-wide scanning for spoof-
+varies and is complex both among different ASes and within indi-                        ing. In Proceedings of the 37th Annual Computer Security Applications Conference.
+                                                                                        1039–1050.
+vidual ASes. Only with sufficient coverage and fine-grained mea-                   [12] Casey Deccio, Alden Hilton, Michael Briggs, Trevin Avery, and Robert Richardson.
+surements as well as analysis that penetrate deep into ASes can we                      2020. Behind closed doors: a network tale of spoofing, intrusion, and false DNS
+gain a comprehensive overview of the actual deployment of SAV                           security. In Proceedings of the ACM Internet Measurement Conference. 65–77.
+                                                                                   [13] Paul Ferguson and Daniel Senie. 1998. RFC 2827: Network ingress filtering:
+across the entire Internet.                                                             Defeating denial of service attacks which employ IP source address spoofing.
+                                                                                   [14] Fernando Gont. 2010. RFC 5927: ICMP attacks against TCP.
+                                                                                   [15] Nelson E Hastings and Paul A McLean. 1996. TCP/IP spoofing fundamentals. In
+7    Conclusion                                                                         Conference Proceedings of the 1996 IEEE Fifteenth Annual International Phoenix
+                                                                                        Conference on Computers and Communications. IEEE, 218–224.
+Our study on the measurement of ISAV deployment using metic-                       [16] Zitong Jin, Xingang Shi, Yan Yang, Xia Yin, Zhiliang Wang, and Jianping Wu.
+ulously crafted spoofed ICMP messages has unveiled significant                          2020. Toposcope: Recover as relationships from fragmentary observations. In
+insights and raised urgent discussions about ISAV deployment prac-                      Proceedings of the ACM Internet Measurement Conference. 266–280.
+                                                                                   [17] Marc Kührer, Thomas Hupperich, Christian Rossow, Thorsten Holz, and
+tices. Our ISAV deployment measurement approach surpasses pre-                          Ruhr-University Bochum. 2014. Exit from Hell? Reducing the Impact of
+vious research in dual-stack capability, high coverage and accuracy,                    { Amplification } { DDoS } Attacks. In 23rd USENIX security symposium (USENIX
+                                                                                        security 14). 111–125.
+and fine granularity.                                                              [18] Qasim Lone, Alisa Frik, Matthew Luckie, Maciej Korczyński, Michel van Eeten,
+   Our measurements reveal that the proportion of networks with                         and Carlos Gañán. 2022. Deployment of source address validation by network
+partial ISAV deployment is significantly higher than reported in                        operators: a randomized control trial. In 2022 IEEE Symposium on Security and
+                                                                                        Privacy (SP). IEEE, 2361–2378.
+previous studies. ISAV deployment varies significantly across dif-                 [19] Qasim Lone, Maciej Korczyński, Carlos Gañán, and Michel van Eeten. 2020.
+ferent network boundaries, levels, locations, and between IPv4 and                      Saving the internet: Explaining the adoption of source address validation by
+IPv6, with a tendency to be implemented more at the edges of                            internet service providers. In Workshop on the Economics of Information Security.
+                                                                                   [20] Qasim Lone, Matthew Luckie, Maciej Korczyński, Hadi Asghari, Mobin Javed,
+smaller networks rather than AS boundaries. The experiments also                        and Michel Van Eeten. 2018. Using crowdsourcing marketplaces for network
+show that critical infrastructure, like top domains, is not prioritized                 measurements: The case of spoofer. In 2018 Network Traffic Measurement and
+                                                                                        Analysis Conference (TMA). IEEE, 1–8.
+for protection over other networks, highlighting that partial ISAV                 [21] Qasim Lone, Matthew Luckie, Maciej Korczyński, and Michel Van Eeten. 2017. Us-
+deployment is insufficient for ensuring comprehensive security.                         ing loops observed in traceroute to infer the ability to spoof. In Passive and Active
+These findings serve as a caution to SAV researchers and network                        Measurement: 18th International Conference, PAM 2017, Sydney, NSW, Australia,
+                                                                                        March 30-31, 2017, Proceedings 18. Springer, 229–241.
+administrators, suggesting that the deployment of SAV is still far                 [22] Matthew Luckie, Robert Beverly, Ryan Koga, Ken Keys, Joshua A Kroll, and
+from sufficient.                                                                        K Claffy. 2019. Network hygiene, incentives, and regulation: deployment of
+
+
+
+
+                                                                             211
+IMC ’24, November 4–6, 2024, Madrid, Spain.                                                                 Shuaicong Yu, Shuying Zhuang, Tao Yu, Changqing An, & Jilong Wang
+
+
+       source address validation in the internet. In Proceedings of the 2019 ACM SIGSAC           and do not affect any other normal communication of the target
+       Conference on Computer and Communications Security. 465–480.                               host. ICMP fragment needed messages can reduce the PMTU in the
+[23]   Keyu Man, Xin’an Zhou, and Zhiyun Qian. 2021. Dns cache poisoning attack: Res-
+       urrections with side channels. In Proceedings of the 2021 ACM SIGSAC Conference            target host’s routing table. However, our method is safe because
+       on Computer and Communications Security. 3400–3414.                                        it controls the target to reduce the PMTU only related to our IP
+[24]   Matt Mathis and John Heffner. 2007. RFC 4821: Packetization layer path MTU
+       discovery.
+                                                                                                  and does not affect other communications. Additionally, we set a
+[25]   Jared Mauch. 2013. Spoofing ASNs. http://seclists.org/nanog/2013/Aug/132                   reasonable PMTU value (1300 bytes, as detailed in Section 5.3), and
+       (2013).                                                                                    this PMTU will be restored after the cache expires (usually 600s, as
+[26]   Jack McCann, S Deering, and J Mogul. 1996. RFC 1981: Path MTU Discovery for
+       IP version 6.                                                                              detailed in Section 4.2) without causing a lasting impact.
+[27]   Jeffrey Mogul and Steve Deering. 1990. RFC 1191: Path MTU discovery.                           Due to the sensitivity of ISAV deployment results, which can
+[28]   Yevheniya Nosyk, Maciej Korczyński, Qasim Lone, Marcin Skwarek, Baptiste                   reveal vulnerabilities to spoofing attacks in specific networks, we
+       Jonglez, and Andrzej Duda. 2023. The Closed Resolver Project: Measuring the
+       Deployment of Inbound Source Address Validation. IEEE/ACM Transactions on                  take a cautious approach in presenting and analyzing the data. We
+       Networking (2023).                                                                         only display and analyze aggregated results to avoid exposing any
+[29]   Long Pan, Jiahai Yang, Lin He, Zhiliang Wang, Leyao Nie, Guanglei Song, and
+       Yaozhong Liu. 2022. Your router is my prober: Measuring ipv6 networks via icmp
+                                                                                                  particular network’s weaknesses publicly. Detailed ISAV deploy-
+       rate limiting side channels. arXiv preprint arXiv:2210.13088 (2022).                       ment results are disclosed exclusively to network administrators of
+[30]   Victor Le Pochat, Tom Van Goethem, Samaneh Tajalizadehkhoob, Maciej Kor-                   the respective networks.
+       czyński, and Wouter Joosen. 2018. Tranco: A research-oriented top sites ranking
+       hardened against manipulation. arXiv preprint arXiv:1806.01156 (2018).
+[31]   Jon Postel. 1981. RFC 792: Internet control message protocol.                              B    ICMP Unreachable Error Type and Code
+[32]   Christian Rossow. 2014. Amplification Hell: Revisiting Network Protocols for
+       DDoS Abuse.. In Network and Distributed System Security (NDSS) Symposium.                  See Table 11.
+[33]   A. Saxena and B. Soh. 2005. Distributed Denial of Service Attacks and Anony-
+       mous Group Authentication on the Internet. In Third International Conference                    Version    Type   Code                    Description
+       on Information Technology and Applications (ICITA’05). https://doi.org/10.1109/                                    0                 Network unreachable
+       ICITA.2005.117                                                                                                     1                    Host unreachable
+[34]   Haya Schulmann and Shujie Zhao. 2024. Insights into SAV Implementations in the                                     2                 Protocol unreachable
+       Internet. In International Conference on Passive and Active Network Measurement.                                   3                    Port unreachable
+       Springer, 69–87.                                                                                                   4              Fragmentation unreachable
+[35]   Guanglei Song, Jiahai Yang, Lin He, Zhiliang Wang, Guo Li, Chenxin Duan,                                           5                   Source route failed
+       Yaozhong Liu, and Zhongxiang Sun. 2022. AddrMiner: A Comprehensive Global                                          6             Destination network unknown
+       Active IPv6 Address Discovery System. In 2022 USENIX Annual Technical Confer-                                      7               Destination host unknown
+                                                                                                       ICMPv4      3
+       ence (USENIX ATC 22). 309–326.                                                                                     8                  Source host isolated
+[36]   K Sriram, D Montgomery, and J Haas. 2019. RFC 8704: Enhanced Feasible-Path                                         9         Network administratively prohibited
+       Unicast Reverse Path Filtering.                                                                                    10           Host administratively prohibited
+[37]   Prakash Veeraraghavan, Dalal Hanna, and Eric Pardede. 2020. NAT++: an efficient                                    11            Network unreachable for TOS
+       micro-nat architecture for solving ip-spoofing attacks in a corporate network.                                     12              Host unreachable for TOS
+       Electronics 9, 9 (2020), 1510.                                                                                     13      Communication administratively filtered
+[38]   Ramin Yazdani, Alden Hilton, Jeroen van der Ham, Roland van Rijswijk-Deij,                                         14              Host precedence violation
+       Casey Deccio, Anna Sperotto, and Mattijs Jonker. 2022. Mirrors in the Sky: On                                      15              Precedence cutoff in effect
+       the Potential of Clouds in DNS Reflection-based Denial-of-Service Attacks. In                                      0                No route to destination
+       Proceedings of the 25th International Symposium on Research in Attacks, Intrusions                                 1              Administratively prohibited
+       and Defenses. 263–275.                                                                                             2            Beyond scope of source address
+[39]   Johannes Zirngibl, Lion Steger, Patrick Sattler, Oliver Gasser, and Georg Carle.                                   3                  Address unreachable
+       2022. Rusty clusters? dusting an IPv6 research foundation. In Proceedings of the                            1
+                                                                                                                          4                    Port unreachable
+       22nd ACM Internet Measurement Conference. 395–409.                                                                 5      Source address failed ingress/egress policy
+[40]   Maya Ziv, Liz Izhikevich, Kimberly Ruth, Katherine Izhikevich, and Zakir Du-                                       6               Reject route to destination
+       rumeric. 2021. ASdb: a system for classifying owners of autonomous systems. In                  ICMPv6
+                                                                                                                          7            Error in Source Routing Header
+       Proceedings of the 21st ACM Internet Measurement Conference. 703–719.                                              0              Hop limit exceeded in transit
+                                                                                                                   3
+                                                                                                                          1          Fragment reassembly time exceeded
+                                                                                                                          0          Erroneous header field encountered
+A       Ethics                                                                                                     4
+                                                                                                                          1     Unrecognized Next Header type encountered
+                                                                                                                          2        Unrecognized IPv6 option encountered
+Our research strictly adheres to the ethics of network measurement,                                                       3     First Fragment has incomplete Header Chain
+aiming to minimize the impact on target systems while securely                                    Table 11: ICMP Unreachable message types, codes, and de-
+assessing their ISAV deployment. We will describe our ethical efforts                             scriptions
+in the following areas:
+   Measurement Targets: We conduct equivalent measurements
+across the complete IPv4 address space and all targets within two
+IPv6 hitlists. Our approach is non-discriminatory with respect to                                 C    Questionnaire
+specific countries, industries, or address spaces.
+   Measurement Rate: We meticulously control the quantity and                                     Q1: Your AS Number.
+rate of packets sent (no more than 10 packets per target host every                                 Q2: Name of Organization.
+10 minutes) to prevent overloading the target networks. This precau-                                Q3: Did you know about Source Address Validation (SAV)
+tion helps to minimize any potential disruption or degradation of                                 before?
+service on the target systems while conducting our measurements.                                    (1) Yes
+   Potential risks of ICMP error messages: In our measure-                                          (2) No
+ment, ICMP unreachable messages are only used to interrupt the                                      Q4: Have you implemented Filter or Source Address Vali-
+upcoming connection between the target host and our machine,                                      dation (SAV) in your network?
+
+
+
+
+                                                                                            212
+Rumors Stop with the Wise: Unveiling Inbound SAV Deployment through Spoofed ICMP Messages                      IMC ’24, November 4–6, 2024, Madrid, Spain.
+
+
+  (1) Yes (To Q7)                                                                     (2) At subnet boundaries within the AS
+  (2) No                                                                              (3) Both AS and subnet boundaries
+  (3) Unknown                                                                         (4) Other (please specify)
+  Q5: Are there any limitations or concerns that have im-                            Q10: What are the reasons you chose to deploy here?
+pacted your SAV deployment?                                                          Q11: What types of SAV filtering techniques are you using?
+  Q6: Are you planning to implement SAV in the future? (To                            (1) Access Control List (ACL)
+Q13)                                                                                  (2) Strict Unicast Reverse Path Forwarding (Strict uRPF)
+  (1) Yes                                                                             (3) Loose Unicast Reverse Path Forwarding (Loose uRPF)
+  (2) No                                                                              (4) Feasible Path Unicast Reverse Path Forwarding (Feasible
+  (3) Unsure                                                                              uRPF)
+  Q7: Have you implemented SAV in both IPv4 and IPv6?                                 (5) Enhanced Feasible Path Unicast Reverse Path Forwarding
+  (1) Both in IPv4 and IPv6                                                               (EFP-uRPF)
+  (2) Only in IPv4                                                                    (6) Other (please specify)
+  (3) Only in IPv6                                                                   Q12: What challenges have you encountered in implement-
+  Q8: Do you filter outbound or inbound traffic?                                   ing SAV?
+                                                                                     Q13: How effective do you believe SAV is in mitigating IP
+  (1) Only outbound filtering
+                                                                                   spoofing and DoS attacks in networks? (1-10)
+  (2) Only inbound filtering
+                                                                                     Q14: We are conducting a large-scale study on SAV de-
+  (3) Both
+                                                                                   ployment probing. Would you be interested in receiving the
+  (4) Unsure / Auto Configuration
+                                                                                   results for your network in the future?
+  Q9: Where have you deployed SAV?
+                                                                                      (1) Yes, my email is
+  (1) At the AS boundary                                                              (2) No, thanks
+
+
+
+
+                                                                             213
+

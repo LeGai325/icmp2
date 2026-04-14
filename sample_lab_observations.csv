@@ -1,0 +1,10 @@
+ip_version,target,method,port,attempt,meas_n1,meas_n2,meas_baseline_fragmented,meas_post_fragmented,detect_n1,detect_n2,detect_baseline_fragmented,detect_post_fragmented,missing,note
+4,192.168.10.1,unreachable,80,0,6,2,0,0,6,1,0,0,0,legacy_linux_host
+4,192.168.10.1,fragmentation,0,0,0,0,0,1,0,0,0,1,0,frag_sensitive
+4,192.168.10.2,unreachable,80,0,6,3,0,0,6,5,0,0,0,isav_enabled
+4,192.168.10.2,fragmentation,0,0,0,0,0,1,0,0,0,0,0,pmtu_blocked
+6,2001:db8:1::10,unreachable,443,0,5,2,0,0,5,1,0,0,0,ipv6_legacy_stack
+6,2001:db8:1::10,fragmentation,0,0,0,0,0,1,0,0,0,1,0,ipv6_frag_sensitive
+6,2001:db8:1::11,unreachable,443,0,1,1,0,0,0,0,0,0,1,missing_once
+6,2001:db8:1::11,unreachable,443,1,5,4,0,0,5,5,0,0,0,measurable_but_intercepted
+6,2001:db8:1::11,fragmentation,0,0,0,0,1,1,0,0,1,1,0,baseline_already_fragmented
