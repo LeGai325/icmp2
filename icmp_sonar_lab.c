@@ -37,6 +37,31 @@ typedef struct {
     size_t cap;
 } NoIsavAsList;
 
+typedef struct {
+    IpVersion ip_version;
+    char prefix[INET6_ADDRSTRLEN + 8];
+    char asn[32];
+} PrefixAsEntry;
+
+typedef struct {
+    PrefixAsEntry *items;
+    size_t len;
+    size_t cap;
+} PrefixAsList;
+
+typedef struct {
+    char asn[32];
+    IpVersion ip_version;
+    char prefix[INET6_ADDRSTRLEN + 8];
+    char target[INET6_ADDRSTRLEN];
+} NoIsavAsRecord;
+
+typedef struct {
+    NoIsavAsRecord *items;
+    size_t len;
+    size_t cap;
+} NoIsavAsList;
+
 static void set_default_config(Config *config) {
     memset(config, 0, sizeof(*config));
     config->ports[0] = 22;
@@ -791,10 +816,13 @@ int main(int argc, char **argv) {
         fprintf(stderr, "%s\n", err);
         goto cleanup;
     }
-    if (targets.len == 0) {
-        fprintf(stderr, "no targets loaded from the configured scope\n");
+    if (config.has_ipv4_global && !add_ipv4_targets_global(config.ipv4_global_limit, &targets, err, sizeof(err))) {
+        fprintf(stderr, "%s\n", err);
         goto cleanup;
     }
+    if (config.has_ipv4_global_progressive) {
+        uint32_t cursor = load_ipv4_cursor(config.ipv4_global_cursor_file);
+        uint32_t next_cursor = cursor;
 
     if (!scheduler_run(&config, &targets, &captures, &observations, err, sizeof(err))) {
         fprintf(stderr, "%s\n", err);
