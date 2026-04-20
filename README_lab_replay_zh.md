@@ -57,7 +57,6 @@ make
 ```bash
 ./icmp_sonar_lab \
   --iface lab0 \
-  --capture-observations sample_lab_observations.csv \
   --prefix-as-v4-txt v4_prefix_as.txt \
   --prefix-as-v6-txt v6_prefix_as.txt \
   --no-isav-addr-csv no_isav_address.csv \
@@ -67,6 +66,8 @@ make
 ```
 
 逻辑说明：
+- Prefix-AS 模式下，若提供 `--capture-observations`，则使用 CSV 回放判定；
+- 若不提供 `--capture-observations`，则改为在线 live TCP 探测（向目标端口发起连接并等待响应）；
 - 程序会遍历每个前缀下的地址并判断是否 `not_intercepted`（视为该地址未部署 ISAV）。
 - 一旦某个 AS 找到一个未部署 ISAV 的地址，则该 AS 后续前缀全部跳过。
 - 最终输出两个 CSV：

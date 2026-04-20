@@ -6,6 +6,36 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <poll.h>
+#include <sys/socket.h>
+#include <unistd.h>
+
+typedef struct {
+    IpVersion ip_version;
+    char prefix[INET6_ADDRSTRLEN + 8];
+    char asn[32];
+} PrefixAsEntry;
+
+typedef struct {
+    PrefixAsEntry *items;
+    size_t len;
+    size_t cap;
+} PrefixAsList;
+
+typedef struct {
+    char asn[32];
+    IpVersion ip_version;
+    char prefix[INET6_ADDRSTRLEN + 8];
+    char target[INET6_ADDRSTRLEN];
+} NoIsavAsRecord;
+
+typedef struct {
+    NoIsavAsRecord *items;
+    size_t len;
+    size_t cap;
+} NoIsavAsList;
 
 typedef struct {
     IpVersion ip_version;
@@ -59,14 +89,15 @@ static void print_usage(const char *prog) {
         "     [--ipv6-csv ipv6_targets.csv] \\\n"
         "     [--ports 22,53,80,443] [--methods unreachable,fragmentation] \\\n"
         "     [--mtu 1300] [--cooldown 600] [--retry-missing 1]\n\n"
-        "  %s --iface lab0 --capture-observations sample.csv \\\n"
+        "  %s --iface lab0 [--capture-observations sample.csv] \\\n"
         "     --prefix-as-v4-txt v4_prefix_as.txt --prefix-as-v6-txt v6_prefix_as.txt \\\n"
         "     --no-isav-addr-csv no_isav_address.csv --no-isav-as-csv no_isav_as.csv\n\n"
         "Notes:\n"
         "  1) This lab tool consumes isolated-environment observations from CSV.\n"
         "  2) --ipv4-global samples addresses across 0.0.0.0/0 with a safe cap.\n"
         "  3) --ipv4-global-progressive scans global IPv4 in sequential batches and persists a cursor.\n"
-        "  4) It reproduces the paper decision logic and deployment classification.\n",
+        "  4) Prefix-AS mode without --capture-observations performs live TCP probing.\n"
+        "  5) It reproduces the paper decision logic and deployment classification.\n",
         prog,
         prog
     );
@@ -317,6 +348,93 @@ static int write_no_isav_as_csv(const char *path, const NoIsavAsList *list, char
     return 1;
 }
 
+static int connect_with_timeout(int fd, const struct sockaddr *addr, socklen_t addr_len, int timeout_ms) {
+    int flags;
+    int rc;
+    struct pollfd pfd;
+    int so_error = 0;
+    socklen_t so_error_len = sizeof(so_error);
+
+    flags = fcntl(fd, F_GETFL, 0);
+    if (flags < 0) {
+        return 0;
+    }
+    if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0) {
+        return 0;
+    }
+
+    rc = connect(fd, addr, addr_len);
+    if (rc == 0) {
+        return 1;
+    }
+    if (errno != EINPROGRESS) {
+        return 0;
+    }
+
+    memset(&pfd, 0, sizeof(pfd));
+    pfd.fd = fd;
+    pfd.events = POLLOUT;
+    rc = poll(&pfd, 1, timeout_ms);
+    if (rc <= 0) {
+        return 0;
+    }
+
+    if (getsockopt(fd, SOL_SOCKET, SO_ERROR, &so_error, &so_error_len) != 0) {
+        return 0;
+    }
+    return (so_error == 0 || so_error == ECONNREFUSED);
+}
+
+static int target_has_live_response(const Config *config, const Target *target, int *hit_port, char *err, size_t err_len) {
+    size_t i;
+
+    for (i = 0; i < config->port_count; i++) {
+        int port = config->ports[i];
+        int fd;
+        int ok = 0;
+
+        if (target->ip_version == IP_VERSION_4) {
+            struct sockaddr_in sa4;
+            memset(&sa4, 0, sizeof(sa4));
+            sa4.sin_family = AF_INET;
+            sa4.sin_port = htons((uint16_t)port);
+            if (inet_pton(AF_INET, target->address, &sa4.sin_addr) != 1) {
+                continue;
+            }
+            fd = socket(AF_INET, SOCK_STREAM, 0);
+            if (fd < 0) {
+                continue;
+            }
+            ok = connect_with_timeout(fd, (const struct sockaddr *)&sa4, sizeof(sa4), config->cooldown > 0 ? config->cooldown : 800);
+            close(fd);
+        } else if (target->ip_version == IP_VERSION_6) {
+            struct sockaddr_in6 sa6;
+            memset(&sa6, 0, sizeof(sa6));
+            sa6.sin6_family = AF_INET6;
+            sa6.sin6_port = htons((uint16_t)port);
+            if (inet_pton(AF_INET6, target->address, &sa6.sin6_addr) != 1) {
+                continue;
+            }
+            fd = socket(AF_INET6, SOCK_STREAM, 0);
+            if (fd < 0) {
+                continue;
+            }
+            ok = connect_with_timeout(fd, (const struct sockaddr *)&sa6, sizeof(sa6), config->cooldown > 0 ? config->cooldown : 800);
+            close(fd);
+        } else {
+            continue;
+        }
+
+        if (ok) {
+            *hit_port = port;
+            return 1;
+        }
+    }
+
+    snprintf(err, err_len, "no live tcp response");
+    return 0;
+}
+
 static uint32_t load_ipv4_cursor(const char *path) {
     FILE *fp;
     unsigned long value;
@@ -464,9 +582,6 @@ static int parse_args(int argc, char **argv, Config *config) {
     if (config->iface[0] == '\0') {
         return 0;
     }
-    if (config->capture_csv[0] == '\0') {
-        return 0;
-    }
     if (config->prefix_as_v4_txt[0] == '\0' && config->prefix_as_v6_txt[0] == '\0' && config->out_prefix[0] == '\0') {
         return 0;
     }
@@ -476,6 +591,9 @@ static int parse_args(int argc, char **argv, Config *config) {
     }
     if ((config->prefix_as_v4_txt[0] != '\0' || config->prefix_as_v6_txt[0] != '\0') &&
         (config->no_isav_addr_csv[0] == '\0' || config->no_isav_as_csv[0] == '\0')) {
+        return 0;
+    }
+    if ((config->prefix_as_v4_txt[0] == '\0' && config->prefix_as_v6_txt[0] == '\0') && config->capture_csv[0] == '\0') {
         return 0;
     }
     if (config->mtu <= 0 || config->cooldown < 0 || config->retry_missing < 0 || config->ipv4_global_limit <= 0 ||
@@ -502,6 +620,8 @@ int main(int argc, char **argv) {
     char host_csv[MAX_PATH_LEN + 64];
     char deployment_csv[MAX_PATH_LEN + 64];
     int ok = 0;
+    int use_prefix_mode;
+    int use_live_prefix;
 
     if (!parse_args(argc, argv, &config)) {
         print_usage(argv[0]);
@@ -519,12 +639,17 @@ int main(int argc, char **argv) {
     no_isav_as_list_init(&no_isav_as_rows);
     deployment_list_init(&deployments);
 
-    if (!capture_engine_load_csv(config.capture_csv, &captures, err, sizeof(err))) {
-        fprintf(stderr, "%s\n", err);
-        goto cleanup;
+    use_prefix_mode = (config.prefix_as_v4_txt[0] != '\0' || config.prefix_as_v6_txt[0] != '\0');
+    use_live_prefix = (use_prefix_mode && config.capture_csv[0] == '\0');
+
+    if (!use_live_prefix) {
+        if (!capture_engine_load_csv(config.capture_csv, &captures, err, sizeof(err))) {
+            fprintf(stderr, "%s\n", err);
+            goto cleanup;
+        }
     }
 
-    if (config.prefix_as_v4_txt[0] != '\0' || config.prefix_as_v6_txt[0] != '\0') {
+    if (use_prefix_mode) {
         size_t i;
 
         if (!load_prefix_as_txt(config.prefix_as_v4_txt, IP_VERSION_4, &prefix_entries, err, sizeof(err))) {
@@ -567,7 +692,53 @@ int main(int argc, char **argv) {
             }
 
             prefix_observations.len = 0;
-            if (!scheduler_run(&run_config, &prefix_targets, &captures, &prefix_observations, err, sizeof(err))) {
+            if (use_live_prefix) {
+                size_t k;
+                for (k = 0; k < prefix_targets.len; k++) {
+                    int hit_port = 0;
+                    if (target_has_live_response(&run_config, &prefix_targets.items[k], &hit_port, err, sizeof(err))) {
+                        HostObservation o;
+                        PrefixAsEntry ref;
+                        NoIsavAsRecord as_row;
+
+                        memset(&o, 0, sizeof(o));
+                        make_timestamp_utc(o.timestamp, sizeof(o.timestamp));
+                        o.ip_version = prefix_targets.items[k].ip_version;
+                        strncpy(o.target, prefix_targets.items[k].address, sizeof(o.target) - 1);
+                        strncpy(o.method, "live_tcp", sizeof(o.method) - 1);
+                        o.port = hit_port;
+                        o.measurable = 1;
+                        strncpy(o.result, "not_intercepted", sizeof(o.result) - 1);
+                        strncpy(o.note, "live_tcp_connect_or_refused", sizeof(o.note) - 1);
+
+                        if (!host_observation_list_append(&no_isav_addr_rows, &o)) {
+                            fprintf(stderr, "failed to append no-isav address row\n");
+                            goto cleanup;
+                        }
+
+                        memset(&ref, 0, sizeof(ref));
+                        ref.ip_version = entry->ip_version;
+                        strncpy(ref.prefix, entry->prefix, sizeof(ref.prefix) - 1);
+                        strncpy(ref.asn, entry->asn, sizeof(ref.asn) - 1);
+                        if (!prefix_as_list_append(&no_isav_addr_refs, &ref)) {
+                            fprintf(stderr, "failed to append no-isav address reference\n");
+                            goto cleanup;
+                        }
+
+                        memset(&as_row, 0, sizeof(as_row));
+                        strncpy(as_row.asn, entry->asn, sizeof(as_row.asn) - 1);
+                        as_row.ip_version = entry->ip_version;
+                        strncpy(as_row.prefix, entry->prefix, sizeof(as_row.prefix) - 1);
+                        strncpy(as_row.target, o.target, sizeof(as_row.target) - 1);
+                        if (!no_isav_as_list_append(&no_isav_as_rows, &as_row)) {
+                            fprintf(stderr, "failed to append no-isav AS row\n");
+                            goto cleanup;
+                        }
+                        break;
+                    }
+                }
+                continue;
+            } else if (!scheduler_run(&run_config, &prefix_targets, &captures, &prefix_observations, err, sizeof(err))) {
                 fprintf(stderr, "%s\n", err);
                 goto cleanup;
             }
@@ -645,10 +816,13 @@ int main(int argc, char **argv) {
         fprintf(stderr, "%s\n", err);
         goto cleanup;
     }
-    if (targets.len == 0) {
-        fprintf(stderr, "no targets loaded from the configured scope\n");
+    if (config.has_ipv4_global && !add_ipv4_targets_global(config.ipv4_global_limit, &targets, err, sizeof(err))) {
+        fprintf(stderr, "%s\n", err);
         goto cleanup;
     }
+    if (config.has_ipv4_global_progressive) {
+        uint32_t cursor = load_ipv4_cursor(config.ipv4_global_cursor_file);
+        uint32_t next_cursor = cursor;
 
     if (!scheduler_run(&config, &targets, &captures, &observations, err, sizeof(err))) {
         fprintf(stderr, "%s\n", err);
