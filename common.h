@@ -51,8 +51,17 @@ typedef struct {
     char iface[64];
     int has_ipv4_cidr;
     char ipv4_cidr[64];
+    int has_ipv4_global;
+    int ipv4_global_limit;
+    int has_ipv4_global_progressive;
+    int ipv4_global_batch_size;
+    char ipv4_global_cursor_file[MAX_PATH_LEN];
     int has_ipv6_csv;
     char ipv6_csv[MAX_PATH_LEN];
+    char prefix_as_v4_txt[MAX_PATH_LEN];
+    char prefix_as_v6_txt[MAX_PATH_LEN];
+    char no_isav_addr_csv[MAX_PATH_LEN];
+    char no_isav_as_csv[MAX_PATH_LEN];
     char capture_csv[MAX_PATH_LEN];
     char out_prefix[MAX_PATH_LEN];
     int ports[MAX_PORTS];
@@ -127,6 +136,15 @@ void target_list_init(TargetList *list);
 void target_list_free(TargetList *list);
 int target_list_append(TargetList *list, const Target *target);
 int add_ipv4_targets_from_cidr(const char *cidr, TargetList *list, char *err, size_t err_len);
+int add_ipv4_targets_global(int limit, TargetList *list, char *err, size_t err_len);
+int add_ipv4_targets_global_progressive(
+    int batch_size,
+    uint32_t start_ip,
+    uint32_t *next_ip,
+    TargetList *list,
+    char *err,
+    size_t err_len
+);
 int add_ipv6_targets_from_csv(const char *path, TargetList *list, char *err, size_t err_len);
 int target_in_ipv4_cidr(const char *cidr, const char *ip);
 int ipv4_cidr_bounds(const char *cidr, uint32_t *start, uint32_t *end, int *prefix);
