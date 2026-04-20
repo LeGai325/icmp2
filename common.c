@@ -199,6 +199,99 @@ int add_ipv4_targets_from_cidr(const char *cidr, TargetList *list, char *err, si
     return 1;
 }
 
+int add_ipv4_targets_global(int limit, TargetList *list, char *err, size_t err_len) {
+    int i;
+    uint64_t range;
+
+    if (limit <= 0) {
+        snprintf(err, err_len, "IPv4 global limit must be > 0");
+        return 0;
+    }
+    if (limit > MAX_IPV4_ENUM_TARGETS) {
+        snprintf(err, err_len, "IPv4 global limit exceeds %d targets", MAX_IPV4_ENUM_TARGETS);
+        return 0;
+    }
+
+    range = 0xFFFFFFFEull;
+    for (i = 0; i < limit; i++) {
+        Target target;
+        struct in_addr addr;
+        uint32_t ip;
+
+        memset(&target, 0, sizeof(target));
+        target.ip_version = IP_VERSION_4;
+        ip = (uint32_t)(1ull + (((uint64_t)i * range) / (uint64_t)limit));
+        addr.s_addr = htonl(ip);
+
+        if (inet_ntop(AF_INET, &addr, target.address, sizeof(target.address)) == NULL) {
+            snprintf(err, err_len, "failed to format global IPv4 target");
+            return 0;
+        }
+
+        if (!target_list_append(list, &target)) {
+            snprintf(err, err_len, "failed to append global IPv4 target");
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
+int add_ipv4_targets_global_progressive(
+    int batch_size,
+    uint32_t start_ip,
+    uint32_t *next_ip,
+    TargetList *list,
+    char *err,
+    size_t err_len
+) {
+    int i;
+    uint32_t ip;
+
+    if (batch_size <= 0) {
+        snprintf(err, err_len, "IPv4 global batch size must be > 0");
+        return 0;
+    }
+    if (batch_size > MAX_IPV4_ENUM_TARGETS) {
+        snprintf(err, err_len, "IPv4 global batch size exceeds %d targets", MAX_IPV4_ENUM_TARGETS);
+        return 0;
+    }
+
+    if (start_ip == 0 || start_ip == 0xFFFFFFFFu) {
+        start_ip = 1;
+    }
+
+    ip = start_ip;
+    for (i = 0; i < batch_size; i++) {
+        Target target;
+        struct in_addr addr;
+
+        memset(&target, 0, sizeof(target));
+        target.ip_version = IP_VERSION_4;
+        addr.s_addr = htonl(ip);
+
+        if (inet_ntop(AF_INET, &addr, target.address, sizeof(target.address)) == NULL) {
+            snprintf(err, err_len, "failed to format progressive global IPv4 target");
+            return 0;
+        }
+
+        if (!target_list_append(list, &target)) {
+            snprintf(err, err_len, "failed to append progressive global IPv4 target");
+            return 0;
+        }
+
+        ip++;
+        if (ip == 0 || ip == 0xFFFFFFFFu) {
+            ip = 1;
+        }
+    }
+
+    if (next_ip != NULL) {
+        *next_ip = ip;
+    }
+    return 1;
+}
+
 int add_ipv6_targets_from_csv(const char *path, TargetList *list, char *err, size_t err_len) {
     FILE *fp;
     char line[1024];

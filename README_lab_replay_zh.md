@@ -6,6 +6,8 @@ using lab observations from CSV.
 
 Current implementation focuses on a safe lab input path:
 - IPv4 targets come from `--ipv4-cidr`
+- or use `--ipv4-global` to sample from global IPv4 space
+- or use `--ipv4-global-progressive` to probe global IPv4 sequentially across runs
 - IPv6 targets come from `--ipv6-csv`
 - observations come from `--capture-observations`
 - outputs are host-level and deployment-level CSV files
@@ -23,7 +25,8 @@ make
   --iface lab0 \
   --capture-observations sample_lab_observations.csv \
   --out-prefix output/run1 \
-  --ipv4-cidr 192.168.10.0/29 \
+  --ipv4-global \
+  --ipv4-global-limit 4096 \
   --ipv6-csv sample_ipv6_targets.csv \
   --ports 22,53,80,443 \
   --methods unreachable,fragmentation \
@@ -31,6 +34,45 @@ make
   --cooldown 600 \
   --retry-missing 1
 ```
+
+`--ipv4-global` 会在 `0.0.0.0/0` 空间均匀采样地址，数量由 `--ipv4-global-limit` 控制（默认 `4096`，最大 `65536`）。
+
+`--ipv4-global-progressive` 会按顺序批量探测全网 IPv4：  
+- 每次运行探测一批，批大小由 `--ipv4-global-batch-size` 控制（默认 `4096`，最大 `65536`）  
+- 进度写入 `--ipv4-global-cursor-file`（默认 `.ipv4_global_cursor`）  
+- 多次重复运行会逐步覆盖整个 IPv4 空间（循环跳过 `0.0.0.0` 与 `255.255.255.255`）
+
+### Prefix-AS 批量检测模式（按 AS 早停）
+
+输入 txt 格式（制表符分隔）：`<prefix>\t<asn>`，例如：
+
+```txt
+1.0.0.0/24	13335
+1.0.4.0/24	38803
+2001:db8::/120	64500
+```
+
+执行命令：
+
+```bash
+./icmp_sonar_lab \
+  --iface lab0 \
+  --prefix-as-v4-txt v4_prefix_as.txt \
+  --prefix-as-v6-txt v6_prefix_as.txt \
+  --no-isav-addr-csv no_isav_address.csv \
+  --no-isav-as-csv no_isav_as.csv \
+  --ports 22,53,80,443 \
+  --methods unreachable,fragmentation
+```
+
+逻辑说明：
+- Prefix-AS 模式下，若提供 `--capture-observations`，则使用 CSV 回放判定；
+- 若不提供 `--capture-observations`，则改为在线 live TCP 探测（向目标端口发起连接并等待响应）；
+- 程序会遍历每个前缀下的地址并判断是否 `not_intercepted`（视为该地址未部署 ISAV）。
+- 一旦某个 AS 找到一个未部署 ISAV 的地址，则该 AS 后续前缀全部跳过。
+- 最终输出两个 CSV：
+  - `no_isav_address.csv`：未部署 ISAV 的地址明细（含 ASN、prefix、target）
+  - `no_isav_as.csv`：未部署 ISAV 的 ASN 列表（首次命中的 prefix 与 target）
 
 ## Capture CSV
 
