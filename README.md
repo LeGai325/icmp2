@@ -1,6 +1,6 @@
-# ICMP_Sonar Lab Replay
+# ICMP_Sonar Paper Reproduction
 
-This is a Linux C replay framework for the paper "Rumors Stop with the Wise".
+This is a Linux C reproduction framework for the paper "Rumors Stop with the Wise".
 It reproduces the decision logic, scheduling flow, and deployment classification
 using lab observations from CSV.
 
